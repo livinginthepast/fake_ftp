@@ -28,8 +28,10 @@ describe FakeFtp::Server do
       server.is_running?.should be_false
       server.start
       server.is_running?.should be_true
+      server.pid.should be_a(Fixnum)
       server.stop
       server.is_running?.should be_false
+      server.pid.should be_nil
     end
 
     it "can be configured with a directory store" do
@@ -43,7 +45,7 @@ describe FakeFtp::Server do
     it "should raise if attempting to delete a directory with contents other than its own"
   end
 
-  context 'connection' do
+  context 'socket' do
     before :each do
       @server = FakeFtp::Server.new(21212)
       @server.start
@@ -52,8 +54,23 @@ describe FakeFtp::Server do
     after :each do
       @server.stop
     end
-    
-    xit 'should accept ftp connections' do
+
+    it "should accept connections" do
+      @client = ""
+      lambda {@client = TCPSocket.open('127.0.0.1', 21212)}.should_not raise_error
+      @client.gets.should == "200 Gotz connection\r\n"
+      lambda {@client.close}.should_not raise_error
+    end
+
+    it "should get unknown command response when nothing is sent" do
+      client = TCPSocket.open('127.0.0.1', 21212)
+      client.gets.should == "200 Can has FTP!\r\n"
+      client.puts
+      client.gets.should == "500 Unknown command\r\n"
+      client.close
+    end
+
+    it 'should accept ftp connections' do
       ftp = Net::FTP.new
       proc { ftp.connect('127.0.0.1', 21212) }.should_not raise_error
       proc { ftp.close }.should_not raise_error
