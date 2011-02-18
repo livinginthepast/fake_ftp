@@ -1,0 +1,5 @@
+.idea
+pkg/*
+*.gem
+.bundle
+.DS_Store
