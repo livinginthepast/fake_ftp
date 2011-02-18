@@ -1,7 +1,8 @@
 require 'logger'
 
 module FakeFtp
-  class Server < TCPServer
+  class Server
+
     attr_accessor :directory, :status, :port
 
     CMDS = %w[]
@@ -14,15 +15,18 @@ module FakeFtp
     end
 
     def start
+#      @server = TCPServer.new('127.0.0.1', port)
       @status = :started
     end
 
     def stop
+#      @server.close
       @status = :dead
     end
 
     def is_running?
       @status != :dead
     end
+
   end
 end

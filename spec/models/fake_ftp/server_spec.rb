@@ -53,7 +53,7 @@ describe FakeFtp::Server do
       @server.stop
     end
     
-    it 'should accept ftp connections' do
+    xit 'should accept ftp connections' do
       ftp = Net::FTP.new
       proc { ftp.connect('127.0.0.1', 21212) }.should_not raise_error
       proc { ftp.close }.should_not raise_error
