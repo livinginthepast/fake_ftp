@@ -6,7 +6,7 @@ module FakeFtp
 
     attr_accessor :directory, :port
 
-    CMDS = %w[user pass]
+    CMDS = %w[acct pass pasv user]
     LNBK = "\r\n"
 
     def initialize(port = 21)
@@ -26,7 +26,9 @@ module FakeFtp
             @client = @server.accept
             respond_with('200 Can has FTP?')
             @connection = Thread.new(@client) do |socket|
-              parse(socket.gets)
+              while !socket.nil? && !socket.closed?
+                parse(socket.gets)
+              end
             end
           end
         end
@@ -62,12 +64,21 @@ module FakeFtp
       end
     end
 
-    def user(stuff = '')
-      '331 send your password'
+    def user(name = '')
+      message = (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
+      respond_with message
     end
 
-    def pass(stuff = '')
-      '230 logged in'
+    def pass(*args)
+      respond_with '230 logged in'
+    end
+
+    def pasv(*args)
+      respond_with '227 Entering Passive Mode (128,205,32,24,82,127)'
+    end
+
+    def acct(*args)
+      respond_with '230 WHATEVER!'
     end
   end
 end

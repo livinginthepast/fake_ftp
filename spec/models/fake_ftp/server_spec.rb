@@ -58,6 +58,7 @@ describe FakeFtp::Server do
 
     after :each do
       @server.stop
+      @server = nil
     end
 
     context 'FTP commands' do
@@ -85,24 +86,63 @@ describe FakeFtp::Server do
         @client.gets.should == "331 send your password\r\n"
       end
 
+      it "accepts anonymous USER" do
+        @client.gets
+        @client.puts "USER anonymous"
+        @client.gets.should == "230 logged in\r\n"
+      end
+
       it "accepts PASS" do
         @client.gets
         @client.puts "PASS password"
         @client.gets.should == "230 logged in\r\n"
       end
+
+      it "accepts PASV" do
+        @client.gets
+        @client.puts "PASV"
+        @client.gets.should == "227 Entering Passive Mode (128,205,32,24,82,127)\r\n"
+      end
+
+      it "accepts ACCT" do
+        @client.gets
+        @client.puts "ACCT"
+        @client.gets.should == "230 WHATEVER!\r\n"
+      end
+
+      it "should accept multiple commands in one session" do
+        @client.gets
+        @client.puts "USER thing"
+        @client.gets
+        @client.puts "USER thing"
+        @client.gets
+        @client.puts "USER thing"
+        @client.gets
+        @client.puts "USER thing"
+      end
     end
 
-    xit 'should accept ftp connections' do
-      ftp = Net::FTP.new
-      proc { ftp.connect('127.0.0.1', 21212) }.should_not raise_error
-      proc { ftp.close }.should_not raise_error
+    context 'ftp client' do
+      before :each do
+        @ftp = Net::FTP.new
+      end
+      it 'should accept ftp connections' do
+        proc { @ftp.connect('127.0.0.1', 21212) }.should_not raise_error
+        proc { @ftp.close }.should_not raise_error
+      end
+
+      it "should allow anonymous authentication" do
+        @ftp.connect('127.0.0.1', 21212)
+        proc {@ftp.login}.should_not raise_error
+      end
+
+      it "should allow named authentication" do
+        @ftp.connect('127.0.0.1', 21212)
+        proc {@ftp.login('someone', 'password')}.should_not raise_error
+      end
+
+      it "should put files to directory store"
     end
-
-    it "should allow anonymous authentication"
-
-    it "should allow named authentication"
-
-    it "should put files to directory store"
 
   end
 
