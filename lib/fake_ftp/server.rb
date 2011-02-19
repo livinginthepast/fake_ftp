@@ -6,15 +6,16 @@ module FakeFtp
 
     attr_accessor :directory, :port
 
-    CMDS = %w[acct pass pasv user]
+    CMDS = %w[acct cwd pass pasv pwd user]
     LNBK = "\r\n"
 
     def initialize(port = 21)
       self.port = port
-      @connection = nil
       if self.is_running?
         raise "Port in use: #{port}"
       end
+      @connection = nil
+      self.directory = "#{Rails.root}/tmp/ftp" rescue '/tmp'
     end
 
     def start
@@ -47,6 +48,8 @@ module FakeFtp
       !service.nil? && service != ''
     end
 
+    private
+
     def respond_with(stuff)
       @client.print stuff << LNBK unless stuff.nil? or @client.nil? or @client.closed?
     end
@@ -64,9 +67,12 @@ module FakeFtp
       end
     end
 
-    def user(name = '')
-      message = (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
-      respond_with message
+    def acct(*args)
+      respond_with '230 WHATEVER!'
+    end
+
+    def cwd(*args)
+      respond_with '250 OK!'
     end
 
     def pass(*args)
@@ -77,8 +83,13 @@ module FakeFtp
       respond_with '227 Entering Passive Mode (128,205,32,24,82,127)'
     end
 
-    def acct(*args)
-      respond_with '230 WHATEVER!'
+    def pwd(*args)
+      respond_with "257 \"#{self.directory}\" is current directory"
+    end
+
+    def user(name = '')
+      message = (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
+      respond_with message
     end
   end
 end
