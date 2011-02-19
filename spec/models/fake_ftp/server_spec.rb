@@ -28,12 +28,17 @@ describe FakeFtp::Server do
       server.is_running?.should be_false
       server.start
       server.is_running?.should be_true
-      server.pid.should be_a(Fixnum)
       server.stop
       server.is_running?.should be_false
-      server.pid.should be_nil
     end
 
+    it "should raise if attempting to use a bound port" do
+      server = FakeFtp::Server.new(21212)
+      server.start
+      proc {FakeFtp::Server.new(21212)}.should raise_error
+      server.stop
+    end
+    
     it "can be configured with a directory store" do
       server = FakeFtp::Server.new
       server.directory = @directory
@@ -55,22 +60,39 @@ describe FakeFtp::Server do
       @server.stop
     end
 
-    it "should accept connections" do
-      @client = ""
-      lambda {@client = TCPSocket.open('127.0.0.1', 21212)}.should_not raise_error
-      @client.gets.should == "200 Gotz connection\r\n"
-      lambda {@client.close}.should_not raise_error
+    context 'FTP commands' do
+      before :each do
+        @client = TCPSocket.open('127.0.0.1', 21212)
+      end
+
+      after :each do
+        @client.close
+      end
+
+      it "should accept connections" do
+        @client.gets.should == "200 Can has FTP?\r\n"
+      end
+
+      it "should get unknown command response when nothing is sent" do
+        @client.gets
+        @client.puts
+        @client.gets.should == "500 Unknown command\r\n"
+      end
+
+      it "accepts USER" do
+        @client.gets
+        @client.puts "USER some_dude"
+        @client.gets.should == "331 send your password\r\n"
+      end
+
+      it "accepts PASS" do
+        @client.gets
+        @client.puts "PASS password"
+        @client.gets.should == "230 logged in\r\n"
+      end
     end
 
-    it "should get unknown command response when nothing is sent" do
-      client = TCPSocket.open('127.0.0.1', 21212)
-      client.gets.should == "200 Can has FTP!\r\n"
-      client.puts
-      client.gets.should == "500 Unknown command\r\n"
-      client.close
-    end
-
-    it 'should accept ftp connections' do
+    xit 'should accept ftp connections' do
       ftp = Net::FTP.new
       proc { ftp.connect('127.0.0.1', 21212) }.should_not raise_error
       proc { ftp.close }.should_not raise_error
