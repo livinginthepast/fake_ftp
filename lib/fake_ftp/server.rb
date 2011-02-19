@@ -11,9 +11,7 @@ module FakeFtp
 
     def initialize(port = 21)
       self.port = port
-      if self.is_running?
-        raise "Port in use: #{port}"
-      end
+      raise("Port in use: #{port}") if self.is_running?
       @connection = nil
       self.directory = "#{Rails.root}/tmp/ftp" rescue '/tmp'
     end
@@ -22,14 +20,12 @@ module FakeFtp
       @started = true
       @server = ::TCPServer.new('127.0.0.1', port)
       @thread = Thread.new do
-        begin
-          while @started
-            @client = @server.accept
-            respond_with('200 Can has FTP?')
-            @connection = Thread.new(@client) do |socket|
-              while !socket.nil? && !socket.closed?
-                parse(socket.gets)
-              end
+        while @started
+          @client = @server.accept
+          respond_with('200 Can has FTP?')
+          @connection = Thread.new(@client) do |socket|
+            while !socket.nil? && !socket.closed?
+              parse(socket.gets)
             end
           end
         end
