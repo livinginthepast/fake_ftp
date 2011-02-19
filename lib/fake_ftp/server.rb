@@ -2,9 +2,6 @@ require 'socket'
 require "thread"
 
 module FakeFtp
-  class ServerQuit < Exception;
-  end
-
   class Server
 
     attr_accessor :directory, :port
@@ -14,7 +11,7 @@ module FakeFtp
 
     def initialize(port = 21)
       self.port = port
-      @connections = []
+      @connection = nil
       if self.is_running?
         raise "Port in use: #{port}"
       end
@@ -28,20 +25,17 @@ module FakeFtp
           while @status != :closed
             @client = @server.accept
             respond_with('200 Can has FTP?')
-            @connections << Thread.new(@client) do |socket|
+            @connection = Thread.new(@client) do |socket|
               parse(socket.gets)
             end
           end
-        rescue ServerQuit
-          @status = :closed
-        ensure
-          @thread = nil
         end
       end
     end
 
     def stop
       @status = :closed
+      @thread = nil
       @server.close
       @server = nil
     end
