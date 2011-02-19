@@ -19,11 +19,11 @@ module FakeFtp
     end
 
     def start
-      @status = :starting
+      @started = true
       @server = ::TCPServer.new('127.0.0.1', port)
       @thread = Thread.new do
         begin
-          while @status != :closed
+          while @started
             @client = @server.accept
             respond_with('200 Can has FTP?')
             @connection = Thread.new(@client) do |socket|
@@ -37,7 +37,7 @@ module FakeFtp
     end
 
     def stop
-      @status = :closed
+      @started = false
       @thread = nil
       @server.close
       @server = nil
