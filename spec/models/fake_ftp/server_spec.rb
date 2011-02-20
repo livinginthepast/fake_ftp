@@ -36,7 +36,7 @@ describe FakeFtp::Server do
     it "should raise if attempting to use a bound port" do
       server = FakeFtp::Server.new(21212)
       server.start
-      proc { FakeFtp::Server.new(21212) }.should raise_error
+      proc { FakeFtp::Server.new(21212) }.should raise_error(Errno::EADDRINUSE, "Address already in use - 21212")
       server.stop
     end
 
@@ -177,14 +177,23 @@ describe FakeFtp::Server do
       it "should allow anonymous authentication" do
         @ftp.connect('127.0.0.1', 21212)
         proc { @ftp.login }.should_not raise_error
+        @ftp.close
       end
 
       it "should allow named authentication" do
         @ftp.connect('127.0.0.1', 21212)
         proc { @ftp.login('someone', 'password') }.should_not raise_error
+        @ftp.close
       end
 
       it "should put files to directory store"
+
+      xit "should disconnect clients on close" do
+        # TODO: when this succeeds, we can care less about manually closing clients
+        @ftp.connect('127.0.0.1', 21212)
+        @server.stop
+        @ftp.closed?.should be_true
+      end
     end
   end
 end

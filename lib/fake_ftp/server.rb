@@ -11,7 +11,7 @@ module FakeFtp
 
     def initialize(port = 21)
       self.port = port
-      raise("Port in use: #{port}") if self.is_running?
+      raise(Errno::EADDRINUSE, "#{port}") if is_running?
       @connection = nil
       self.directory = "#{Rails.root}/tmp/ftp" rescue '/tmp'
     end
@@ -24,18 +24,22 @@ module FakeFtp
           @client = @server.accept
           respond_with('200 Can has FTP?')
           @connection = Thread.new(@client) do |socket|
-            while !socket.nil? && !socket.closed?
+            while @started && !socket.nil? && !socket.closed?
               parse(socket.gets)
             end
+            @client.close
+            @client = nil
           end
         end
+        @server.close
+        @server = nil
       end
     end
 
     def stop
       @started = false
-      @thread = nil
-      @server.close
+      @client.close if @client
+      @server.close if @server
       @server = nil
     end
 
