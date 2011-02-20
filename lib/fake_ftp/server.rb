@@ -6,7 +6,7 @@ module FakeFtp
 
     attr_accessor :directory, :port
 
-    CMDS = %w[acct cwd pass pasv pwd quit user]
+    CMDS = %w[acct cwd cdup pass pasv pwd quit type user]
     LNBK = "\r\n"
 
     def initialize(port = 21, options = {})
@@ -76,6 +76,7 @@ module FakeFtp
     def cwd(*args)
       '250 OK!'
     end
+    alias :cdup :cwd
 
     def pass(*args)
       '230 logged in'
@@ -91,6 +92,17 @@ module FakeFtp
 
     def quit(*args)
       '221 OMG bye!'
+    end
+
+    def type(type = 'A')
+      case type.to_s
+        when 'A'
+          '200 Type set to A.'
+        when 'I'
+          '200 Type set to I.'
+        else
+          '504 We don\'t allow those'
+      end
     end
 
     def user(name = '')

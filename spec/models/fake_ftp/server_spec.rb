@@ -146,9 +146,12 @@ describe FakeFtp::Server do
           @client.gets.should == "257 \"/tmp\" is current directory\r\n"
         end
 
-        it "says OK to any CWD, without doing anything" do
+        it "says OK to any CWD, CDUP, without doing anything" do
           directory = @server.directory
           @client.puts "CWD somewhere/else"
+          @client.gets.should == "250 OK!\r\n"
+          @server.directory.should == directory
+          @client.puts "CDUP"
           @client.gets.should == "250 OK!\r\n"
           @server.directory.should == directory
         end
@@ -156,6 +159,34 @@ describe FakeFtp::Server do
         it "does not respond to MKD" do
           @client.puts "MKD some_dir"
           @client.gets.should == "500 Unknown command\r\n"
+        end
+      end
+
+      context 'file commands' do
+        before :each do
+          @client.gets
+        end
+        it "accepts TYPE ascii" do
+          @client.puts "TYPE A"
+          @client.gets.should == "200 Type set to A.\r\n"
+        end
+
+        it "accepts TYPE image" do
+          @client.puts "TYPE I"
+          @client.gets.should == "200 Type set to I.\r\n"
+        end
+
+        it "does not accept TYPEs other than ascii or image" do
+          @client.puts "TYPE E"
+          @client.gets.should == "504 We don't allow those\r\n"
+          @client.puts "TYPE N"
+          @client.gets.should == "504 We don't allow those\r\n"
+          @client.puts "TYPE T"
+          @client.gets.should == "504 We don't allow those\r\n"
+          @client.puts "TYPE C"
+          @client.gets.should == "504 We don't allow those\r\n"
+          @client.puts "TYPE L"
+          @client.gets.should == "504 We don't allow those\r\n"
         end
       end
 
