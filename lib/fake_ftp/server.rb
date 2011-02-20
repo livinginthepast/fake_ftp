@@ -6,13 +6,14 @@ module FakeFtp
 
     attr_accessor :directory, :port
 
-    CMDS = %w[acct cwd pass pasv pwd user]
+    CMDS = %w[acct cwd pass pasv pwd quit user]
     LNBK = "\r\n"
 
-    def initialize(port = 21)
+    def initialize(port = 21, options = {})
       self.port = port
       raise(Errno::EADDRINUSE, "#{port}") if is_running?
       @connection = nil
+      @options = options
       self.directory = "#{Rails.root}/tmp/ftp" rescue '/tmp'
     end
 
@@ -25,7 +26,7 @@ module FakeFtp
           respond_with('200 Can has FTP?')
           @connection = Thread.new(@client) do |socket|
             while @started && !socket.nil? && !socket.closed?
-              parse(socket.gets)
+              respond_with parse(socket.gets)
             end
             @client.close
             @client = nil
@@ -56,6 +57,7 @@ module FakeFtp
 
     def parse(request)
       return if request.nil?
+      puts request if @options[:debug]
       command = request[0, 4].downcase.strip
       contents = request.split
       message = contents[1..contents.length]
@@ -68,28 +70,31 @@ module FakeFtp
     end
 
     def acct(*args)
-      respond_with '230 WHATEVER!'
+      '230 WHATEVER!'
     end
 
     def cwd(*args)
-      respond_with '250 OK!'
+      '250 OK!'
     end
 
     def pass(*args)
-      respond_with '230 logged in'
+      '230 logged in'
     end
 
     def pasv(*args)
-      respond_with '227 Entering Passive Mode (128,205,32,24,82,127)'
+      '227 Entering Passive Mode (128,205,32,24,82,127)'
     end
 
     def pwd(*args)
-      respond_with "257 \"#{self.directory}\" is current directory"
+      "257 \"#{self.directory}\" is current directory"
+    end
+
+    def quit(*args)
+      '221 OMG bye!'
     end
 
     def user(name = '')
-      message = (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
-      respond_with message
+      (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
     end
   end
 end

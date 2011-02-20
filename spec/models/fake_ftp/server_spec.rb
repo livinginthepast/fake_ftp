@@ -99,6 +99,12 @@ describe FakeFtp::Server do
         @client.gets.should == "227 Entering Passive Mode (128,205,32,24,82,127)\r\n"
       end
 
+      it "accepts QUIT" do
+        @client.gets
+        @client.puts "QUIT"
+        @client.gets.should == "221 OMG bye!\r\n"
+      end
+
       context 'authentication commands' do
         before :each do
           @client.gets ## connection successful response
@@ -186,10 +192,18 @@ describe FakeFtp::Server do
         @ftp.close
       end
 
+      it "should allow client to quit" do
+        @ftp.connect('127.0.0.1', 21212)
+        proc { @ftp.login('someone', 'password') }.should_not raise_error
+        proc { @ftp.quit }.should_not raise_error
+        @ftp.close
+      end
+
       it "should put files to directory store"
 
       xit "should disconnect clients on close" do
         # TODO: when this succeeds, we can care less about manually closing clients
+        #       otherwise we get a CLOSE_WAIT process hanging around that blocks our port
         @ftp.connect('127.0.0.1', 21212)
         @server.stop
         @ftp.closed?.should be_true
