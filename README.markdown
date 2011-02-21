@@ -7,9 +7,13 @@ that can be bound to any arbitrary port on localhost.
 Why?
 ----
 
-We want to ensure that our code works, and we want to do so that is agnostic to the implementation used in your
-code (unlike with stubs or mocks). To do so, we needed a simple FTP server that could fake out enough of the protocol
-to get us by, allowing us to test that files get to their intended destination rather than testing how our code did so.
+We want to ensure that our code works, in a way that is agnostic to the implementation used (unlike with stubs or mocks).
+
+How
+---
+
+FakeFtp is a simple FTP server that fakes out enough of the protocol to get us by, allowing us to test that files get to
+their intended destination rather than testing how our code does so.
 
 Usage
 -----
