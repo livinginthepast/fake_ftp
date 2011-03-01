@@ -15,18 +15,23 @@ How
 FakeFtp is a simple FTP server that fakes out enough of the protocol to get us by, allowing us to test that files get to
 their intended destination rather than testing how our code does so.
 
+Note: Only passive FTP is currently implemented
+
 Usage
 -----
 
     require 'fake_ftp'
     require 'net/ftp'
 
-    server = FakeFtp::Server.new(21212)
+    server = FakeFtp::Server.new(21212, 21213)
+    ## 21212 is the control port, which is used by FTP for the primary connection
+    ## 21213 is the data port, used in FTP passive mode to send file contents
     server.start
 
     ftp = Net::FTP.new
     ftp.connect('127.0.0.1', 21212)
     ftp.login('user', 'password')
+    ftp.passive = true
     ftp.put('some_file.txt')
     ftp.close
 
@@ -35,5 +40,5 @@ Usage
 TODO
 ----
 
-* File upload
+* Active file upload
 * Matchers
