@@ -121,7 +121,9 @@ module FakeFtp
     end
 
     def _quit(*args)
-      '221 OMG bye!'
+      respond_with '221 OMG bye!'
+      @client.close if @client
+      @client = nil
     end
 
     def _stor(filename)
