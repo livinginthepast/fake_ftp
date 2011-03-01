@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.version     = FakeFtp::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Colin Shield", "Eric Saxby"]
-  s.email       = ["github@modcloth.com"]
+  s.email       = ["sax+github@livinginthepast.org"]
   s.homepage    = "http://rubygems.org/gems/fake_ftp"
   s.summary     = %q{Creates a fake FTP server for use in testing}
   s.description = %q{Testing FTP? Use this!}
