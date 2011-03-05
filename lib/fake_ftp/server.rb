@@ -1,11 +1,10 @@
 require 'socket'
-require "thread"
+require 'thread'
 
 module FakeFtp
   class Server
 
     attr_accessor :port, :passive_port
-    attr_reader :files
 
     CMDS = %w[acct cwd cdup pass pasv port pwd quit stor type user]
     LNBK = "\r\n"
@@ -16,9 +15,16 @@ module FakeFtp
       raise(Errno::EADDRINUSE, "#{port}") if is_running?
       raise(Errno::EADDRINUSE, "#{passive_port}") if passive_port && is_running?(passive_port)
       @connection = nil
-      @data = nil
       @options = options
       @files = []
+    end
+
+    def files
+      @files.map(&:name)
+    end
+
+    def file(name)
+      @files.detect { |file| file.name == name}
     end
 
     def start
@@ -126,11 +132,13 @@ module FakeFtp
     end
 
     def _stor(filename)
-      @files << File.basename(filename.to_s)
       respond_with('125 Do it!')
 
       data_client = @data_server.accept
-      @data = data_client.recv(1024)
+      data = data_client.recv(1024)
+
+      file = FakeFtp::File.new(::File.basename(filename.to_s), data.length)
+      @files << file
 
       data_client.close
       '226 Did it!'

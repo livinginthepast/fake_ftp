@@ -57,6 +57,22 @@ describe FakeFtp::Server do
     end
   end
 
+  context 'files' do
+    before :each do
+      @file = FakeFtp::File.new('filename', 34)
+      @server = FakeFtp::Server.new(21212)
+      @server.instance_variable_set(:@files, [@file])
+    end
+
+    it "returns filenames from :files" do
+      @server.files.should include('filename')
+    end
+
+    it "can be accessed with :file" do
+      @server.file('filename').should == @file
+    end
+  end
+
   context 'socket' do
     before :each do
       @server = FakeFtp::Server.new(21212, 21213)
@@ -265,6 +281,7 @@ describe FakeFtp::Server do
           @data_client.close
           @client.gets.should == "226 Did it!\r\n"
           @server.files.should include('some_file')
+          @server.file('some_file').bytes.should == 10
         end
       end
     end
@@ -298,10 +315,14 @@ describe FakeFtp::Server do
       end
 
       it "should put files using PASV" do
+        File.stat(@text_filename).size.should == 20
+
         @ftp.connect('127.0.0.1', 21212)
         @ftp.passive = true
         proc { @ftp.put(@text_filename) }.should_not raise_error
+
         @server.files.should include('text_file.txt')
+        @server.file('text_file.txt').bytes.should == 20
       end
 
       xit "should disconnect clients on close" do

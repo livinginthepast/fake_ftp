@@ -35,13 +35,15 @@ Usage
     ftp.put('some_file.txt')
     ftp.close
 
+    server.files.should include('some_file.txt')
+    server.file('some_file.txt').bytes.should == 25
+
     server.stop
 
 TODO
 ----
 
 * Active file upload
-* Matchers
 
 References
 ----------
