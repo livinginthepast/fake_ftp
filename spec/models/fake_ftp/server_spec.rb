@@ -4,13 +4,8 @@ require 'net/ftp'
 describe FakeFtp::Server do
 
   before :each do
-    @directory = File.expand_path("../fixtures/destination", File.dirname(__FILE__))
     @text_filename = File.expand_path("../../fixtures/text_file.txt", File.dirname(__FILE__))
     @bin_filename = File.expand_path("../../fixtures/invisible_bike.jpg", File.dirname(__FILE__))
-  end
-
-  after :each do
-    FileUtils.rm_rf(@directory+"/*")
   end
 
   context 'setup' do
@@ -60,28 +55,6 @@ describe FakeFtp::Server do
       proc { FakeFtp::Server.new(21214, 21213) }.should raise_error(Errno::EADDRINUSE, "Address already in use - 21213")
       server.stop
     end
-
-    it "can be configured with a directory store" do
-      server = FakeFtp::Server.new
-      server.directory = @directory
-      server.directory.should == @directory
-    end
-
-    it "should default directory to /tmp if Rails.root does not exist" do
-      server = FakeFtp::Server.new
-      server.directory.should == '/tmp'
-    end
-
-    it "should default directory to Rails.root/tmp/ftp if exists" do
-      module Rails; end
-      Rails.stub!(:root).and_return('/somewhere')
-      server = FakeFtp::Server.new
-      server.directory.should == '/somewhere/tmp/ftp'
-    end
-
-    it "should clean up directory after itself"
-
-    it "should raise if attempting to delete a directory with contents other than its own"
   end
 
   context 'socket' do
@@ -234,25 +207,15 @@ describe FakeFtp::Server do
         end
 
         it "returns directory on PWD" do
-          @server.directory = @directory
           @client.puts "PWD"
-          @client.gets.should == "257 \"#{@directory}\" is current directory\r\n"
-        end
-
-        it "returns default directory on PWD" do
-          @server.directory = '/tmp'
-          @client.puts "PWD"
-          @client.gets.should == "257 \"/tmp\" is current directory\r\n"
+          @client.gets.should == "257 \"/pub\" is current directory\r\n"
         end
 
         it "says OK to any CWD, CDUP, without doing anything" do
-          directory = @server.directory
           @client.puts "CWD somewhere/else"
           @client.gets.should == "250 OK!\r\n"
-          @server.directory.should == directory
           @client.puts "CDUP"
           @client.gets.should == "250 OK!\r\n"
-          @server.directory.should == directory
         end
 
         it "does not respond to MKD" do
@@ -334,7 +297,7 @@ describe FakeFtp::Server do
         @ftp.close
       end
 
-      it "should put files to directory store using PASV" do
+      it "should put files using PASV" do
         @ftp.connect('127.0.0.1', 21212)
         @ftp.passive = true
         proc { @ftp.put(@text_filename) }.should_not raise_error

@@ -4,7 +4,7 @@ require "thread"
 module FakeFtp
   class Server
 
-    attr_accessor :directory, :port, :passive_port
+    attr_accessor :port, :passive_port
     attr_reader :files
 
     CMDS = %w[acct cwd cdup pass pasv port pwd quit stor type user]
@@ -19,7 +19,6 @@ module FakeFtp
       @data = nil
       @options = options
       @files = []
-      self.directory = "#{Rails.root}/tmp/ftp" rescue '/tmp'
     end
 
     def start
@@ -117,7 +116,7 @@ module FakeFtp
     end
 
     def _pwd(*args)
-      "257 \"#{self.directory}\" is current directory"
+      "257 \"/pub\" is current directory"
     end
 
     def _quit(*args)
