@@ -5,6 +5,7 @@ module FakeFtp
   class Server
 
     attr_accessor :port, :passive_port
+    attr_reader :mode
 
     CMDS = %w[acct cwd cdup pass pasv port pwd quit stor type user]
     LNBK = "\r\n"
@@ -17,6 +18,7 @@ module FakeFtp
       @connection = nil
       @options = options
       @files = []
+      @mode = :active
     end
 
     def files
@@ -24,7 +26,7 @@ module FakeFtp
     end
 
     def file(name)
-      @files.detect { |file| file.name == name}
+      @files.detect { |file| file.name == name }
     end
 
     def start
@@ -100,6 +102,7 @@ module FakeFtp
 
     def _pasv(*args)
       if passive_port
+        @mode = :passive
         p1 = (passive_port / 256).to_i
         p2 = passive_port % 256
         "227 Entering Passive Mode (127,0,0,1,#{p1},#{p2})"
@@ -109,16 +112,15 @@ module FakeFtp
     end
 
     def _port(remote)
-      # remote = remote.split(',')
-      # remote_port = remote[4].to_i * 256 + remote[5].to_i
-      # unless @data_connection.nil?
-      #   @data_connection.close
-      #   @data_connection = nil
-      # end
-      # puts remote_port
-      # @data_connection = ::TCPSocket.open('127.0.0.1', remote_port)
-      # '200 Okay'
-      '500 Not implemented yet'
+      remote = remote.first.split(',')
+      remote_port = remote[4].to_i * 256 + remote[5].to_i
+      unless @active_connection.nil?
+        @active_connection.close
+        @active_connection = nil
+      end
+      @mode = :active
+      @active_connection = ::TCPSocket.open('127.0.0.1', remote_port)
+      '200 Okay'
     end
 
     def _pwd(*args)
@@ -132,15 +134,22 @@ module FakeFtp
     end
 
     def _stor(filename)
-      respond_with('125 Do it!')
+      if @mode == :passive
+        respond_with('125 Do it!')
+        data_client = @data_server.accept
+      else
+        respond_with('425 Ain\'t no data port!') && return if @active_connection.nil?
+        respond_with('125 Do it!')
 
-      data_client = @data_server.accept
+        data_client = @active_connection
+      end
+
       data = data_client.recv(1024)
-
       file = FakeFtp::File.new(::File.basename(filename.to_s), data.length)
       @files << file
 
       data_client.close
+      @active_connection = nil
       '226 Did it!'
     end
 

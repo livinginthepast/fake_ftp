@@ -33,6 +33,11 @@ describe FakeFtp::Server do
       server.is_running?.should be_false
     end
 
+    it "should default :mode to :active" do
+      server = FakeFtp::Server.new(21212, 21213)
+      server.mode.should == :active
+    end
+
     it "should start and stop passive port" do
       server = FakeFtp::Server.new(21212, 21213)
       server.is_running?(21213).should be_false
@@ -128,10 +133,12 @@ describe FakeFtp::Server do
         end
 
         it "accepts PASV" do
+          @server.mode.should == :active
           @client = TCPSocket.open('127.0.0.1', 21212)
           @client.gets
           @client.puts "PASV"
           @client.gets.should == "227 Entering Passive Mode (127,0,0,1,82,221)\r\n"
+          @server.mode.should == :passive
         end
 
         it "responds with correct PASV port" do
@@ -153,31 +160,46 @@ describe FakeFtp::Server do
           @client.puts "PASV"
           @client.gets.should == "502 Aww hell no, use Active\r\n"
         end
+      end
 
-        it "does not accept PORT (yet)" do
-          ## TODO this test can go away once the following pending test succeeds
+      context 'active' do
+        before :each do
           @client = TCPSocket.open('127.0.0.1', 21212)
           @client.gets
-          @client.puts "PORT 127,0,0,1,82,224"
-          @client.gets.should == "500 Not implemented yet\r\n"
+
+          @data_server = ::TCPServer.new('127.0.0.1', 21216)
+          @data_connection = Thread.new do
+            @server_client = @data_server.accept
+            @server_client.should_not be_nil
+          end
         end
 
-        xit "accepts PORT and connects to port" do
-          # @testing = true
-          # @data_server = ::TCPServer.new('127.0.0.1', 21216)
-          # @data_connection = Thread.new do
-          #   while @testing
-          #     @server_client = @data_connection.accept
-          #     @server_connection = Thread.new(@server_client) do |socket|
-          #       @connected = true
-          #     end
-          #   end
-          # end
-          # @client.gets
-          # @client.puts "PORT 127,0,0,1,82,224"
-          # @client.gets.should == "200 Okay\r\n"
-          # @connected.should be_true
-          # @testing = false
+        after :each do
+          @data_server.close
+          @data_server = nil
+          @data_connection = nil
+          @client.close
+        end
+
+        it "accepts PORT and connects to port" do
+          @client.puts "PORT 127,0,0,1,82,224"
+          @client.gets.should == "200 Okay\r\n"
+
+          @data_connection.join
+        end
+
+        it "should switch to :active on port command" do
+          @server.mode.should == :active
+          @client.puts 'PASV'
+          @client.gets
+          @server.mode.should == :passive
+
+          @client.puts "PORT 127,0,0,1,82,224"
+          @client.gets.should == "200 Okay\r\n"
+
+          @data_connection.join
+
+          @server.mode.should == :active
         end
       end
 
@@ -273,15 +295,58 @@ describe FakeFtp::Server do
           @client.gets.should == "504 We don't allow those\r\n"
         end
 
-        it "accepts STOR with filename" do
-          @client.puts "STOR some_file"
-          @client.gets.should == "125 Do it!\r\n"
-          @data_client = TCPSocket.open('127.0.0.1', 21213)
-          @data_client.puts "1234567890"
-          @data_client.close
-          @client.gets.should == "226 Did it!\r\n"
-          @server.files.should include('some_file')
-          @server.file('some_file').bytes.should == 10
+        context 'passive' do
+          before :each do
+            @client.puts 'PASV'
+            @client.gets.should == "227 Entering Passive Mode (127,0,0,1,82,221)\r\n"
+          end
+
+          it "accepts STOR with filename" do
+            @client.puts "STOR some_file"
+            @client.gets.should == "125 Do it!\r\n"
+            @data_client = TCPSocket.open('127.0.0.1', 21213)
+            @data_client.puts "1234567890"
+            @data_client.close
+            @client.gets.should == "226 Did it!\r\n"
+            @server.files.should include('some_file')
+            @server.file('some_file').bytes.should == 10
+          end
+        end
+
+        context 'active' do
+          before :each do
+            @data_server = ::TCPServer.new('127.0.0.1', 21216)
+            @data_connection = Thread.new do
+              @server_client = @data_server.accept
+            end
+          end
+
+          after :each do
+            @data_server.close
+            @data_connection = nil
+            @data_server = nil
+          end
+
+          it "sends error message if no PORT received" do
+            @client.puts "STOR some_file"
+            @client.gets.should == "425 Ain't no data port!\r\n"
+          end
+
+          it "accepts STOR with filename" do
+            @client.puts "PORT 127,0,0,1,82,224"
+            @client.gets.should == "200 Okay\r\n"
+
+            @client.puts "STOR some_other_file"
+            @client.gets.should == "125 Do it!\r\n"
+
+            @data_connection.join
+            @server_client.puts "12345"
+            @server_client.close
+
+            @client.gets.should == "226 Did it!\r\n"
+            @server.files.should include('some_other_file')
+            @server.file('some_other_file').bytes.should == 5
+          end
         end
       end
     end
@@ -290,28 +355,29 @@ describe FakeFtp::Server do
       before :each do
         @ftp = Net::FTP.new
       end
+
+      after :each do
+        @ftp.close
+      end
+
       it 'should accept ftp connections' do
         proc { @ftp.connect('127.0.0.1', 21212) }.should_not raise_error
-        proc { @ftp.close }.should_not raise_error
       end
 
       it "should allow anonymous authentication" do
         @ftp.connect('127.0.0.1', 21212)
         proc { @ftp.login }.should_not raise_error
-        @ftp.close
       end
 
       it "should allow named authentication" do
         @ftp.connect('127.0.0.1', 21212)
         proc { @ftp.login('someone', 'password') }.should_not raise_error
-        @ftp.close
       end
 
       it "should allow client to quit" do
         @ftp.connect('127.0.0.1', 21212)
         proc { @ftp.login('someone', 'password') }.should_not raise_error
         proc { @ftp.quit }.should_not raise_error
-        @ftp.close
       end
 
       it "should put files using PASV" do
@@ -319,6 +385,17 @@ describe FakeFtp::Server do
 
         @ftp.connect('127.0.0.1', 21212)
         @ftp.passive = true
+        proc { @ftp.put(@text_filename) }.should_not raise_error
+
+        @server.files.should include('text_file.txt')
+        @server.file('text_file.txt').bytes.should == 20
+      end
+
+      it "should put files using active" do
+        File.stat(@text_filename).size.should == 20
+
+        @ftp.connect('127.0.0.1', 21212)
+        @ftp.passive = false
         proc { @ftp.put(@text_filename) }.should_not raise_error
 
         @server.files.should include('text_file.txt')
