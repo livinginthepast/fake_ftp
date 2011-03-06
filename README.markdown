@@ -15,8 +15,6 @@ How
 FakeFtp is a simple FTP server that fakes out enough of the protocol to get us by, allowing us to test that files get to
 their intended destination rather than testing how our code does so.
 
-Note: Only passive FTP is currently implemented
-
 Usage
 -----
 
@@ -43,7 +41,7 @@ Usage
 TODO
 ----
 
-* Active file upload
+* files should track if uploaded via active or passive
 
 References
 ----------
