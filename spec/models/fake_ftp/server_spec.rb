@@ -389,6 +389,8 @@ describe FakeFtp::Server do
 
         @server.files.should include('text_file.txt')
         @server.file('text_file.txt').bytes.should == 20
+        @server.file('text_file.txt').should be_passive
+        @server.file('text_file.txt').should_not be_active
       end
 
       it "should put files using active" do
@@ -400,6 +402,8 @@ describe FakeFtp::Server do
 
         @server.files.should include('text_file.txt')
         @server.file('text_file.txt').bytes.should == 20
+        @server.file('text_file.txt').should_not be_passive
+        @server.file('text_file.txt').should be_active
       end
 
       xit "should disconnect clients on close" do

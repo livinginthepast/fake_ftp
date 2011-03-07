@@ -145,7 +145,7 @@ module FakeFtp
       end
 
       data = data_client.recv(1024)
-      file = FakeFtp::File.new(::File.basename(filename.to_s), data.length)
+      file = FakeFtp::File.new(::File.basename(filename.to_s), data.length, @mode)
       @files << file
 
       data_client.close
