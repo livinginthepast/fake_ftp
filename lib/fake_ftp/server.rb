@@ -134,15 +134,10 @@ module FakeFtp
     end
 
     def _stor(filename)
-      if @mode == :passive
-        respond_with('125 Do it!')
-        data_client = @data_server.accept
-      else
-        respond_with('425 Ain\'t no data port!') && return if @active_connection.nil?
-        respond_with('125 Do it!')
+      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
 
-        data_client = @active_connection
-      end
+      respond_with('125 Do it!')
+      data_client = active? ? @active_connection : @data_server.accept
 
       data = data_client.recv(1024)
       file = FakeFtp::File.new(::File.basename(filename.to_s), data.length, @mode)
@@ -166,6 +161,10 @@ module FakeFtp
 
     def _user(name = '')
       (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
+    end
+
+    def active?
+      @mode == :active
     end
   end
 end
