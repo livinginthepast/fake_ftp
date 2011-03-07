@@ -63,6 +63,7 @@ To test active upload:
 
     server.stop
 
+Note that many FTP clients default to active, unless specified otherwise.
 
 References
 ----------
