@@ -15,6 +15,12 @@ describe FakeFtp::File do
       @file.bytes = 87
       @file.bytes.should == 87
     end
+
+    it "has a data attribute" do
+      @file.data = 'some data'
+      @file.data.should == 'some data'
+      @file.bytes.should == 'some data'.length
+    end
   end
 
   context 'setup' do
