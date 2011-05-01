@@ -339,6 +339,21 @@ describe FakeFtp::Server do
             @client.puts "LIST"
             @client.gets.should == "150 Listing status ok, about to open data connection\r\n"
             @data_client = TCPSocket.open('127.0.0.1', 21213)
+            data = @data_client.read(2048)
+            @data_client.close
+            data.should == [
+              "-rw-r--r--\t1\towner\tgroup\t10\t#{@server.file('some_file').created.strftime('%b %d %H:%M')}\tsome_file",
+              "-rw-r--r--\t1\towner\tgroup\t10\t#{@server.file('another_file').created.strftime('%b %d %H:%M')}\tanother_file",
+            ].join("\n")
+            @client.gets.should == "226 List information transferred\r\n"
+          end
+
+          it "accepts an NLST command" do
+            @server.add_file('some_file', '1234567890')
+            @server.add_file('another_file', '1234567890')
+            @client.puts "NLST"
+            @client.gets.should == "150 Listing status ok, about to open data connection\r\n"
+            @data_client = TCPSocket.open('127.0.0.1', 21213)
             data = @data_client.read(1024)
             @data_client.close
             data.should == "some_file\nanother_file"
@@ -397,6 +412,24 @@ describe FakeFtp::Server do
             data.should == '1234567890'
             @client.gets.should == "226 File transferred\r\n"
           end
+
+          it "accepts an NLST command" do
+            @client.puts "PORT 127,0,0,1,82,224"
+            @client.gets.should == "200 Okay\r\n"
+
+            @server.add_file('some_file', '1234567890')
+            @server.add_file('another_file', '1234567890')
+            @client.puts "NLST"
+            @client.gets.should == "150 Listing status ok, about to open data connection\r\n"
+
+            @data_connection.join
+            data = @server_client.read(1024)
+            @server_client.close
+
+            data.should == "some_file\nanother_file"
+            @client.gets.should == "226 List information transferred\r\n"
+          end
+
         end
       end
     end

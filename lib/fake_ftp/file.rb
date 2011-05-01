@@ -3,8 +3,10 @@ module FakeFtp
     attr_accessor :bytes, :name
     attr_writer :type
     attr_accessor :data
+    attr_reader :created
 
     def initialize(name = nil, data = nil, type = nil)
+      @created = Time.now
       @name = name
       @data = data
       data_is_bytes = (data.nil? || Integer === data)
