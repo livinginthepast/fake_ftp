@@ -7,7 +7,7 @@ module FakeFtp
     attr_accessor :port, :passive_port
     attr_reader :mode
 
-    CMDS = %w[acct cwd cdup pass pasv port pwd quit stor type user]
+    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user]
     LNBK = "\r\n"
 
     def initialize(control_port = 21, data_port = nil, options = {})
@@ -27,6 +27,10 @@ module FakeFtp
 
     def file(name)
       @files.detect { |file| file.name == name }
+    end
+
+    def add_file(filename, data)
+      @files << FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
     end
 
     def start
@@ -140,12 +144,58 @@ module FakeFtp
       data_client = active? ? @active_connection : @data_server.accept
 
       data = data_client.recv(1024)
-      file = FakeFtp::File.new(::File.basename(filename.to_s), data.length, @mode)
+      file = FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
       @files << file
 
       data_client.close
       @active_connection = nil
       '226 Did it!'
+    end
+
+    def _retr(filename)
+      respond_with('501 No filename given') if filename.empty?
+
+      file = file(::File.basename(filename.to_s))
+      return respond_with('550 File not found') if file.nil?
+
+      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
+
+      respond_with('150 File status ok, about to open data connection')
+      data_client = active? ? @active_connection : @data_server.accept
+
+      data_client.write(file.data)
+
+      data_client.close
+      @active_connection = nil
+      '226 File transferred'
+    end
+
+    def _list(args)
+      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
+
+      respond_with('150 Listing status ok, about to open data connection')
+      data_client = active? ? @active_connection : @data_server.accept
+
+      data_client.write(@files.map do |f|
+        "-rw-r--r--\t1\towner\tgroup\t#{f.bytes}\t#{f.created.strftime('%b %d %H:%M')}\t#{f.name}"
+      end.join("\n"))
+      data_client.close
+      @active_connection = nil
+
+      '226 List information transferred'
+    end
+
+    def _nlst(args)
+      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
+
+      respond_with('150 Listing status ok, about to open data connection')
+      data_client = active? ? @active_connection : @data_server.accept
+
+      data_client.write(files.join("\n"))
+      data_client.close
+      @active_connection = nil
+
+      '226 List information transferred'
     end
 
     def _type(type = 'A')
