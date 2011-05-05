@@ -311,6 +311,55 @@ describe FakeFtp::Server do
             @server.files.should include('some_file')
             @server.file('some_file').bytes.should == 10
           end
+
+          it "does not accept RETR without a filename" do
+              @client.puts "RETR"
+              @client.gets.should == "501 No filename given\r\n"
+          end
+
+          it "does not serve files that do not exist" do
+              @client.puts "RETR some_file"
+              @client.gets.should == "550 File not found\r\n"
+          end
+
+          it "accepts RETR with a filename" do
+            @server.add_file('some_file', '1234567890')
+            @client.puts "RETR some_file"
+            @client.gets.should == "150 File status ok, about to open data connection\r\n"
+            @data_client = TCPSocket.open('127.0.0.1', 21213)
+            data = @data_client.read(1024)
+            @data_client.close
+            data.should == '1234567890'
+            @client.gets.should == "226 File transferred\r\n"
+          end
+
+          it "accepts a LIST command" do
+            @server.add_file('some_file', '1234567890')
+            @server.add_file('another_file', '1234567890')
+            @client.puts "LIST"
+            @client.gets.should == "150 Listing status ok, about to open data connection\r\n"
+            @data_client = TCPSocket.open('127.0.0.1', 21213)
+            data = @data_client.read(2048)
+            @data_client.close
+            data.should == [
+              "-rw-r--r--\t1\towner\tgroup\t10\t#{@server.file('some_file').created.strftime('%b %d %H:%M')}\tsome_file",
+              "-rw-r--r--\t1\towner\tgroup\t10\t#{@server.file('another_file').created.strftime('%b %d %H:%M')}\tanother_file",
+            ].join("\n")
+            @client.gets.should == "226 List information transferred\r\n"
+          end
+
+          it "accepts an NLST command" do
+            @server.add_file('some_file', '1234567890')
+            @server.add_file('another_file', '1234567890')
+            @client.puts "NLST"
+            @client.gets.should == "150 Listing status ok, about to open data connection\r\n"
+            @data_client = TCPSocket.open('127.0.0.1', 21213)
+            data = @data_client.read(1024)
+            @data_client.close
+            data.should == "some_file\nanother_file"
+            @client.gets.should == "226 List information transferred\r\n"
+          end
+
         end
 
         context 'active' do
@@ -347,6 +396,40 @@ describe FakeFtp::Server do
             @server.files.should include('some_other_file')
             @server.file('some_other_file').bytes.should == 5
           end
+
+          it "accepts RETR with a filename" do
+            @client.puts "PORT 127,0,0,1,82,224"
+            @client.gets.should == "200 Okay\r\n"
+
+            @server.add_file('some_file', '1234567890')
+            @client.puts "RETR some_file"
+            @client.gets.should == "150 File status ok, about to open data connection\r\n"
+
+            @data_connection.join
+            data = @server_client.read(1024)
+            @server_client.close
+
+            data.should == '1234567890'
+            @client.gets.should == "226 File transferred\r\n"
+          end
+
+          it "accepts an NLST command" do
+            @client.puts "PORT 127,0,0,1,82,224"
+            @client.gets.should == "200 Okay\r\n"
+
+            @server.add_file('some_file', '1234567890')
+            @server.add_file('another_file', '1234567890')
+            @client.puts "NLST"
+            @client.gets.should == "150 Listing status ok, about to open data connection\r\n"
+
+            @data_connection.join
+            data = @server_client.read(1024)
+            @server_client.close
+
+            data.should == "some_file\nanother_file"
+            @client.gets.should == "226 List information transferred\r\n"
+          end
+
         end
       end
     end
