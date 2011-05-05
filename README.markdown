@@ -76,6 +76,7 @@ Contributors
 
 * Eric Saxby
 * Colin Shield
+* liehann (https://github.com/liehann)
 
 License
 -------
