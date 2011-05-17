@@ -53,7 +53,7 @@ module FakeFtp
       end
 
       if passive_port
-        @data_server = ::TCPserver.new('127.0.0.1', passive_port)
+        @data_server = ::TCPServer.new('127.0.0.1', passive_port)
       end
     end
 
@@ -85,7 +85,7 @@ module FakeFtp
       message = contents[1..contents.length]
       case command
         when *CMDS
-          __send__ "_#{command}", message
+          __send__ "_#{command}", *message
         else
           '500 Unknown command'
       end
@@ -115,8 +115,8 @@ module FakeFtp
       end
     end
 
-    def _port(remote)
-      remote = remote.first.split(',')
+    def _port(remote = '')
+      remote = remote.split(',')
       remote_port = remote[4].to_i * 256 + remote[5].to_i
       unless @active_connection.nil?
         @active_connection.close
@@ -137,7 +137,7 @@ module FakeFtp
       @client = nil
     end
 
-    def _stor(filename)
+    def _stor(filename = '')
       respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
 
       respond_with('125 Do it!')
@@ -152,7 +152,7 @@ module FakeFtp
       '226 Did it!'
     end
 
-    def _retr(filename)
+    def _retr(filename = '')
       respond_with('501 No filename given') if filename.empty?
 
       file = file(::File.basename(filename.to_s))
@@ -170,7 +170,7 @@ module FakeFtp
       '226 File transferred'
     end
 
-    def _list(args)
+    def _list(*args)
       respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
 
       respond_with('150 Listing status ok, about to open data connection')
@@ -185,7 +185,7 @@ module FakeFtp
       '226 List information transferred'
     end
 
-    def _nlst(args)
+    def _nlst(*args)
       respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
 
       respond_with('150 Listing status ok, about to open data connection')

@@ -389,7 +389,7 @@ describe FakeFtp::Server do
             @client.gets.should == "125 Do it!\r\n"
 
             @data_connection.join
-            @server_client.puts "12345"
+            @server_client.print "12345"
             @server_client.close
 
             @client.gets.should == "226 Did it!\r\n"
