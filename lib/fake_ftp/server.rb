@@ -91,6 +91,11 @@ module FakeFtp
       end
     end
 
+    ## FTP commands
+    #
+    #  Methods are prefixed with an underscore to avoid conflicts with internal server
+    #  methods. Methods map 1:1 to FTP command words.
+    #
     def _acct(*args)
       '230 WHATEVER!'
     end
@@ -99,6 +104,34 @@ module FakeFtp
       '250 OK!'
     end
     alias :_cdup :_cwd
+
+    def _list(*args)
+      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
+
+      respond_with('150 Listing status ok, about to open data connection')
+      data_client = active? ? @active_connection : @data_server.accept
+
+      data_client.write(@files.map do |f|
+        "-rw-r--r--\t1\towner\tgroup\t#{f.bytes}\t#{f.created.strftime('%b %d %H:%M')}\t#{f.name}"
+      end.join("\n"))
+      data_client.close
+      @active_connection = nil
+
+      '226 List information transferred'
+    end
+
+    def _nlst(*args)
+      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
+
+      respond_with('150 Listing status ok, about to open data connection')
+      data_client = active? ? @active_connection : @data_server.accept
+
+      data_client.write(files.join("\n"))
+      data_client.close
+      @active_connection = nil
+
+      '226 List information transferred'
+    end
 
     def _pass(*args)
       '230 logged in'
@@ -137,21 +170,6 @@ module FakeFtp
       @client = nil
     end
 
-    def _stor(filename = '')
-      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
-
-      respond_with('125 Do it!')
-      data_client = active? ? @active_connection : @data_server.accept
-
-      data = data_client.recv(1024)
-      file = FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
-      @files << file
-
-      data_client.close
-      @active_connection = nil
-      '226 Did it!'
-    end
-
     def _retr(filename = '')
       respond_with('501 No filename given') if filename.empty?
 
@@ -170,32 +188,19 @@ module FakeFtp
       '226 File transferred'
     end
 
-    def _list(*args)
+    def _stor(filename = '')
       respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
 
-      respond_with('150 Listing status ok, about to open data connection')
+      respond_with('125 Do it!')
       data_client = active? ? @active_connection : @data_server.accept
 
-      data_client.write(@files.map do |f|
-        "-rw-r--r--\t1\towner\tgroup\t#{f.bytes}\t#{f.created.strftime('%b %d %H:%M')}\t#{f.name}"
-      end.join("\n"))
+      data = data_client.recv(1024)
+      file = FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
+      @files << file
+
       data_client.close
       @active_connection = nil
-
-      '226 List information transferred'
-    end
-
-    def _nlst(*args)
-      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
-
-      respond_with('150 Listing status ok, about to open data connection')
-      data_client = active? ? @active_connection : @data_server.accept
-
-      data_client.write(files.join("\n"))
-      data_client.close
-      @active_connection = nil
-
-      '226 List information transferred'
+      '226 Did it!'
     end
 
     def _type(type = 'A')
