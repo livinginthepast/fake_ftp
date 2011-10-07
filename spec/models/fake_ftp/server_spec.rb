@@ -76,6 +76,11 @@ describe FakeFtp::Server do
     it "can be accessed with :file" do
       @server.file('filename').should == @file
     end
+
+    it "can reset files" do
+      @server.reset
+      @server.files.should == []
+    end
   end
 
   context 'socket' do

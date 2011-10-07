@@ -29,6 +29,10 @@ module FakeFtp
       @files.detect { |file| file.name == name }
     end
 
+    def reset
+      @files.clear
+    end
+
     def add_file(filename, data)
       @files << FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
     end
