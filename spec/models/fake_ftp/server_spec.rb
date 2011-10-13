@@ -394,6 +394,32 @@ describe FakeFtp::Server, 'commands' do
         @data_server = nil
       end
 
+      it "does not respond to MKD" do
+        client.puts "MKD some_dir"
+        client.gets.should == "500 Unknown command\r\n"
+      end
+
+      it 'should save the directory after you CWD' do
+        client.puts "CWD /somewhere/else"
+        client.gets.should == "250 OK!\r\n"
+        client.puts "PWD"
+        client.gets.should == "257 \"/somewhere/else\" is current directory\r\n"
+      end
+
+      it 'CWD should add a / to the beginning of the directory' do
+        client.puts "CWD somewhere/else"
+        client.gets.should == "250 OK!\r\n"
+        client.puts "PWD"
+        client.gets.should == "257 \"/somewhere/else\" is current directory\r\n"
+      end
+
+      it 'should not change the directory on CDUP' do
+        client.puts "CDUP"
+        client.gets.should == "250 OK!\r\n"
+        client.puts "PWD"
+        client.gets.should == "257 \"/pub\" is current directory\r\n"
+      end
+
       it "sends error message if no PORT received" do
         client.puts "STOR some_file"
         client.gets.should == "425 Ain't no data port!\r\n"
