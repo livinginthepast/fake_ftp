@@ -265,6 +265,27 @@ describe FakeFtp::Server do
           @client.puts "MKD some_dir"
           @client.gets.should == "500 Unknown command\r\n"
         end
+
+        it 'should save the directory after you CWD' do
+          @client.puts "CWD /somewhere/else"
+          @client.gets.should == "250 OK!\r\n"
+          @client.puts "PWD"
+          @client.gets.should == "257 \"/somewhere/else\" is current directory\r\n"
+        end
+
+        it 'CWD should add a / to the beginning of the directory' do
+          @client.puts "CWD somewhere/else"
+          @client.gets.should == "250 OK!\r\n"
+          @client.puts "PWD"
+          @client.gets.should == "257 \"/somewhere/else\" is current directory\r\n"
+        end
+
+        it 'should not change the directory on CDUP' do
+          @client.puts "CDUP"
+          @client.gets.should == "250 OK!\r\n"
+          @client.puts "PWD"
+          @client.gets.should == "257 \"/pub\" is current directory\r\n"
+        end
       end
 
       context 'file commands' do
