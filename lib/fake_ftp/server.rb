@@ -7,7 +7,7 @@ module FakeFtp
     attr_accessor :port, :passive_port
     attr_reader :mode, :path
 
-    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user]
+    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user rnfr rnto]
     LNBK = "\r\n"
 
     def initialize(control_port = 21, data_port = nil, options = {})
@@ -226,6 +226,18 @@ module FakeFtp
 
     def _user(name = '')
       (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
+    end
+
+    def _rnfr(name = nil)
+      @rnfr_file = file(name)
+
+      '350 Waiting for rnto'
+    end
+
+    def _rnto(name = nil)
+      @rnfr_file.name = name
+
+      '250 OK!'
     end
 
     def active?

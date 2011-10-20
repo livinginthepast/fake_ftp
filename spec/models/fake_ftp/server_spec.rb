@@ -456,6 +456,20 @@ describe FakeFtp::Server do
             @client.gets.should == "226 List information transferred\r\n"
           end
 
+          it 'can rename with RNFR and RNTO' do
+            @client.puts "PORT 127,0,0,1,82,224"
+            @client.gets.should == "200 Okay\r\n"
+
+            @server.add_file('some_file', '1234567890')
+            @server.add_file('another_file', '1234567890')
+
+            @client.puts "RNFR some_file"
+            @client.gets.should == "350 Waiting for rnto\r\n"
+            @client.puts "RNTO some_file_renamed"
+            @client.gets.should == "250 OK!\r\n"
+
+            @server.files.should == ["some_file_renamed", "another_file"]
+          end
         end
       end
     end
