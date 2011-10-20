@@ -22,6 +22,8 @@ module FakeFtp
       quit
       stor
       retr
+      rnfr
+      rnto
       type
       user
     )
@@ -281,6 +283,18 @@ module FakeFtp
 
     def _user(name = '')
       (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
+    end
+
+    def _rnfr(name = nil)
+      @rnfr_file = file(name)
+
+      '350 Waiting for rnto'
+    end
+
+    def _rnto(name = nil)
+      @rnfr_file.name = name
+
+      '250 OK!'
     end
 
     def active?
