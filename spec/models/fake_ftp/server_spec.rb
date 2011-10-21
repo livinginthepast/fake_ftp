@@ -225,11 +225,6 @@ describe FakeFtp::Server, 'commands' do
       client.puts "CDUP"
       client.gets.should == "250 OK!\r\n"
     end
-
-    it "does not respond to MKD" do
-      client.puts "MKD some_dir"
-      client.gets.should == "500 Unknown command\r\n"
-    end
   end
 
   context 'file commands' do
@@ -394,9 +389,9 @@ describe FakeFtp::Server, 'commands' do
         @data_server = nil
       end
 
-      it "does not respond to MKD" do
+      it 'creates a directory on MKD' do
         client.puts "MKD some_dir"
-        client.gets.should == "500 Unknown command\r\n"
+        client.gets.should == "257 OK!\r\n"
       end
 
       it 'should save the directory after you CWD' do

@@ -14,6 +14,7 @@ module FakeFtp
       cdup
       dele
       list
+      mkd
       nlst
       pass
       pasv
@@ -295,6 +296,10 @@ module FakeFtp
       @rnfr_file.name = name
 
       '250 OK!'
+    end
+
+    def _mkd(directory)
+      "257 OK!"
     end
 
     def active?
