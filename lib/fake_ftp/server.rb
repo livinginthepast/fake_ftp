@@ -7,7 +7,7 @@ module FakeFtp
     attr_accessor :port, :passive_port
     attr_reader :mode, :path
 
-    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user rnfr rnto]
+    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user rnfr rnto mkd]
     LNBK = "\r\n"
 
     def initialize(control_port = 21, data_port = nil, options = {})
@@ -238,6 +238,10 @@ module FakeFtp
       @rnfr_file.name = name
 
       '250 OK!'
+    end
+
+    def _mkd(directory)
+      "257 OK!"
     end
 
     def active?
