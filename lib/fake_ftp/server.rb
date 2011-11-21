@@ -11,7 +11,8 @@ module FakeFtp
     CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user]
     LNBK = "\r\n"
 
-    def initialize(control_port = 21, data_port = nil, options = {})
+    def initialize(control_port = 21, data_port = nil, options = { :BindAddress => '127.0.0.1', :Use220First => false })
+
       self.port = control_port
       self.passive_port = data_port
       raise(Errno::EADDRINUSE, "#{port}") if is_running?
@@ -20,6 +21,11 @@ module FakeFtp
       @options = options
       @files = []
       @mode = :active
+      @thread = nil
+      @client = nil
+      @server = nil
+      @started = false
+      @active_connection = nil
     end
 
     def files
@@ -40,17 +46,24 @@ module FakeFtp
 
     def start
       @started = true
-      @server = ::TCPServer.new('127.0.0.1', port)
+      @server = ::TCPServer.new(@options[:BindAddress], port)
       @thread = Thread.new do
-        while @started
-          @client = @server.accept
-          respond_with('200 Can has FTP?')
-          @connection = Thread.new(@client) do |socket|
-            while @started && !socket.nil? && !socket.closed?
-              respond_with parse(socket.gets)
+        while @started && !@server.nil? && !@server.closed?
+          begin
+            @client = @server.accept_nonblock
+            if @options[:Use220First]
+              respond_with('220 FakeFtp')
+            else
+              respond_with('200 Can has FTP?')
             end
-            @client.close
-            @client = nil
+            @connection = Thread.new(@client) do |socket|
+              while @started && !socket.nil? && !socket.closed?
+                respond_with parse(socket.gets)
+              end
+              socket.close unless socket.closed?
+              socket = nil
+            end
+          rescue Errno::EAGAIN, Errno::EWOULDBLOCK, Errno::ECONNABORTED, Errno::EPROTO, Errno::EINTR
           end
         end
         @server.close
@@ -58,17 +71,16 @@ module FakeFtp
       end
 
       if passive_port
-        @data_server = ::TCPServer.new('127.0.0.1', passive_port)
+        @data_server = ::TCPServer.new(@options[:BindAddress], passive_port)
       end
     end
 
     def stop
       @started = false
-      @client.close if @client
-      @server.close if @server
-      @server = nil
+      @thread.join()
+      @client.close if @client != nil and !@client.closed?
+      @server.close if @server != nil and !@server.closed?
       @data_server.close if @data_server
-      @data_server = nil
     end
 
     def is_running?(tcp_port = nil)
@@ -146,7 +158,11 @@ module FakeFtp
         @mode = :passive
         p1 = (passive_port / 256).to_i
         p2 = passive_port % 256
-        "227 Entering Passive Mode (127,0,0,1,#{p1},#{p2})"
+        if @options.has_key? :ExternalAddress
+          "227 Entering Passive Mode (#{@options[:ExternalAddress].gsub(".", ",")},#{p1},#{p2})"
+        else
+          "227 Entering Passive Mode (#{@options[:BindAddress].gsub(".", ",")},#{p1},#{p2})"
+        end
       else
         '502 Aww hell no, use Active'
       end
@@ -160,7 +176,8 @@ module FakeFtp
         @active_connection = nil
       end
       @mode = :active
-      @active_connection = ::TCPSocket.open('127.0.0.1', remote_port)
+      addr = "#{remote[0]}.#{remote[1]}.#{remote[2]}.#{remote[3]}"
+      @active_connection = ::TCPSocket.open(addr, remote_port)
       '200 Okay'
     end
 
