@@ -91,7 +91,7 @@ describe FakeFtp::Server, 'commands' do
     end
 
     it "should accept connections" do
-      @client.gets.should == "200 Can has FTP?\r\n"
+      @client.gets.should == "220 Can has FTP?\r\n"
     end
 
     it "should get unknown command response when nothing is sent" do

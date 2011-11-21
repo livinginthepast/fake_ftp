@@ -44,7 +44,7 @@ module FakeFtp
       @thread = Thread.new do
         while @started
           @client = @server.accept
-          respond_with('200 Can has FTP?')
+          respond_with('220 Can has FTP?')
           @connection = Thread.new(@client) do |socket|
             while @started && !socket.nil? && !socket.closed?
               respond_with parse(socket.gets)
@@ -225,9 +225,9 @@ module FakeFtp
     def active?
       @mode == :active
     end
-    
+
     private
-    
+
     def port_is_open?(port)
       begin
         Timeout::timeout(1) do
