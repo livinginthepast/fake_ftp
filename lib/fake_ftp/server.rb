@@ -1,5 +1,6 @@
 require 'socket'
 require 'thread'
+require 'timeout'
 
 module FakeFtp
   class Server
@@ -71,8 +72,7 @@ module FakeFtp
     end
 
     def is_running?(tcp_port = nil)
-      service = `lsof -w -n -i tcp:#{tcp_port || port}`
-      !service.nil? && service != ''
+      tcp_port.nil? ? port_is_open?(port) : port_is_open?(tcp_port)
     end
 
     private
@@ -224,6 +224,25 @@ module FakeFtp
 
     def active?
       @mode == :active
+    end
+    
+    private
+    
+    def port_is_open?(port)
+      begin
+        Timeout::timeout(1) do
+          begin
+            s = TCPSocket.new("127.0.0.1", port)
+            s.close
+            return true
+          rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
+            return false
+          end
+        end
+      rescue Timeout::Error
+      end
+
+      return false
     end
   end
 end
