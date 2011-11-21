@@ -6,9 +6,9 @@ module FakeFtp
   class Server
 
     attr_accessor :port, :passive_port
-    attr_reader :mode
+    attr_reader :mode, :path
 
-    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user]
+    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user rnfr rnto mkd]
     LNBK = "\r\n"
 
     def initialize(control_port = 21, data_port = nil, options = {})
@@ -20,6 +20,7 @@ module FakeFtp
       @options = options
       @files = []
       @mode = :active
+      @path = "/pub"
     end
 
     def files
@@ -105,9 +106,14 @@ module FakeFtp
     end
 
     def _cwd(*args)
+      @path = args[0]
+      @path = "/#{path}" if path[0].chr != "/"
       '250 OK!'
     end
-    alias :_cdup :_cwd
+
+    def _cdup(*args)
+      '250 OK!'
+    end
 
     def _list(*args)
       respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
@@ -165,7 +171,7 @@ module FakeFtp
     end
 
     def _pwd(*args)
-      "257 \"/pub\" is current directory"
+      "257 \"#{path}\" is current directory"
     end
 
     def _quit(*args)
@@ -220,6 +226,22 @@ module FakeFtp
 
     def _user(name = '')
       (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
+    end
+
+    def _rnfr(name = nil)
+      @rnfr_file = file(name)
+
+      '350 Waiting for rnto'
+    end
+
+    def _rnto(name = nil)
+      @rnfr_file.name = name
+
+      '250 OK!'
+    end
+
+    def _mkd(directory)
+      "257 OK!"
     end
 
     def active?

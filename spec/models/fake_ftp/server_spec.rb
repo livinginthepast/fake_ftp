@@ -261,9 +261,30 @@ describe FakeFtp::Server do
           @client.gets.should == "250 OK!\r\n"
         end
 
-        it "does not respond to MKD" do
+        it 'creates a directory on MKD' do
           @client.puts "MKD some_dir"
-          @client.gets.should == "500 Unknown command\r\n"
+          @client.gets.should == "257 OK!\r\n"
+        end
+
+        it 'should save the directory after you CWD' do
+          @client.puts "CWD /somewhere/else"
+          @client.gets.should == "250 OK!\r\n"
+          @client.puts "PWD"
+          @client.gets.should == "257 \"/somewhere/else\" is current directory\r\n"
+        end
+
+        it 'CWD should add a / to the beginning of the directory' do
+          @client.puts "CWD somewhere/else"
+          @client.gets.should == "250 OK!\r\n"
+          @client.puts "PWD"
+          @client.gets.should == "257 \"/somewhere/else\" is current directory\r\n"
+        end
+
+        it 'should not change the directory on CDUP' do
+          @client.puts "CDUP"
+          @client.gets.should == "250 OK!\r\n"
+          @client.puts "PWD"
+          @client.gets.should == "257 \"/pub\" is current directory\r\n"
         end
       end
 
@@ -435,6 +456,20 @@ describe FakeFtp::Server do
             @client.gets.should == "226 List information transferred\r\n"
           end
 
+          it 'can rename with RNFR and RNTO' do
+            @client.puts "PORT 127,0,0,1,82,224"
+            @client.gets.should == "200 Okay\r\n"
+
+            @server.add_file('some_file', '1234567890')
+            @server.add_file('another_file', '1234567890')
+
+            @client.puts "RNFR some_file"
+            @client.gets.should == "350 Waiting for rnto\r\n"
+            @client.puts "RNTO some_file_renamed"
+            @client.gets.should == "250 OK!\r\n"
+
+            @server.files.should == ["some_file_renamed", "another_file"]
+          end
         end
       end
     end
