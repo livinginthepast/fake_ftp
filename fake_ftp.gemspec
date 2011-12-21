@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = ">= 1.3.6"
   s.rubyforge_project = "fake_ftp"
-  
+
   s.add_development_dependency "bundler", '>=1.0.10'
   s.add_development_dependency "rspec", '>2'
   s.add_development_dependency "rake", '>=0.8.7'

@@ -9,5 +9,5 @@ require 'rspec'
 require 'fake_ftp' # and any other gems you need
 
 RSpec.configure do |config|
-  
+
 end

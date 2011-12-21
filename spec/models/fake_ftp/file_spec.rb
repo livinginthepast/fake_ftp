@@ -44,7 +44,7 @@ describe FakeFtp::File do
       file.bytes.should == 104
       file.instance_variable_get(:@type).should be_nil
     end
-    
+
     it "can be initialized with name and bytes and type" do
       file = FakeFtp::File.new('filename', 104, :passive)
       file.name.should == 'filename'
