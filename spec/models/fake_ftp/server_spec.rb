@@ -351,19 +351,12 @@ describe FakeFtp::Server, 'commands' do
         @client.gets.should == "226 List information transferred\r\n"
       end
 
-      it "should allow mtime" do
+      it "should allow mdtm" do
         filename = "file.txt"
         now = Time.now
         server.add_file(filename, "some dummy content", now)
-        @client.puts "MTIME #{filename}"
-        @client.gets.should == "150 File status ok, about to open data connection\r\n"
-
-        @data_client = TCPSocket.open('127.0.0.1', 21213)
-        data = @data_client.read(1024)
-        @data_client.close
-        data.should == now.to_s
-
-        @client.gets.should == "226 Modified information transferred\r\n"
+        @client.puts "MDTM #{filename}"
+        @client.gets.should == "213 #{now.strftime("%Y%m%d%H%M%S")}\r\n"
       end
     end
 
@@ -468,6 +461,33 @@ describe FakeFtp::Server, 'with ftp client' do
     it "should allow client to quit" do
       proc { client.login('someone', 'password') }.should_not raise_error
       proc { client.quit }.should_not raise_error
+    end
+
+    it "should allow nlst" do
+      filename = 'someone'
+      server.add_file(filename, "some data")
+
+      client.passive = true
+      mtime = client.nlst()
+      mtime.should == %W(someone)
+
+      client.passive = false
+      mtime = client.nlst()
+      mtime.should == %W(someone)
+    end
+
+    it "should allow mtime" do
+      filename = 'someone'
+      time = Time.now
+      server.add_file(filename, "some data", time)
+
+      client.passive = false
+      mtime = client.mtime(filename)
+      mtime.to_s.should == time.to_s
+
+      client.passive = true
+      mtime = client.mtime(filename)
+      mtime.to_s.should == time.to_s
     end
 
     it "should put files using PASV" do

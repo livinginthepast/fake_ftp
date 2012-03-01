@@ -13,7 +13,7 @@ module FakeFtp
       @bytes = data_is_bytes ? data : data.length
       @data = data_is_bytes ? nil : data
       @type = type
-      @last_modified_time = last_modified_time
+      @last_modified_time = last_modified_time.utc
     end
 
     def data=(data)
