@@ -8,7 +8,7 @@ module FakeFtp
     attr_accessor :port, :passive_port
     attr_reader :mode
 
-    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user]
+    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user mtime]
     LNBK = "\r\n"
 
     def initialize(control_port = 21, data_port = nil, options = {})
@@ -34,8 +34,8 @@ module FakeFtp
       @files.clear
     end
 
-    def add_file(filename, data)
-      @files << FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
+    def add_file(filename, data, last_modified_time = Time.now)
+      @files << FakeFtp::File.new(::File.basename(filename.to_s), data, @mode, last_modified_time)
     end
 
     def start
@@ -84,9 +84,15 @@ module FakeFtp
     def parse(request)
       return if request.nil?
       puts request if @options[:debug]
-      command = request[0, 4].downcase.strip
+      if request.index(' ')
+        command = request[0..request.index(' ')-1].downcase.strip
+      else
+        command = request.downcase.strip
+      end
+
       contents = request.split
       message = contents[1..contents.length]
+
       case command
         when *CMDS
           __send__ "_#{command}", *message
@@ -94,6 +100,7 @@ module FakeFtp
           '500 Unknown command'
       end
     end
+
 
     ## FTP commands
     #
@@ -107,6 +114,7 @@ module FakeFtp
     def _cwd(*args)
       '250 OK!'
     end
+
     alias :_cdup :_cwd
 
     def _list(*args)
@@ -135,6 +143,23 @@ module FakeFtp
       @active_connection = nil
 
       '226 List information transferred'
+    end
+
+    def _mtime(filename = '')
+      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
+
+      respond_with('501 No filename given') if filename.empty?
+      server_file = file(filename)
+      respond_with('550 File not found') if server_file.nil?
+
+      respond_with('150 File status ok, about to open data connection')
+      data_client = active? ? @active_connection : @data_server.accept
+
+      data_client.write(server_file.last_modified_time)
+      data_client.close
+      @active_connection = nil
+
+      '226 Modified information transferred'
     end
 
     def _pass(*args)

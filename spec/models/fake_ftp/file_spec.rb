@@ -11,6 +11,12 @@ describe FakeFtp::File do
       @file.name.should == "some name"
     end
 
+    it "has a last_modified_time attribute" do
+      now = Time.now
+      @file.last_modified_time = now
+      @file.last_modified_time.should == now
+    end
+
     it "has a bytes attribute" do
       @file.bytes = 87
       @file.bytes.should == 87
@@ -44,12 +50,21 @@ describe FakeFtp::File do
       file.bytes.should == 104
       file.instance_variable_get(:@type).should be_nil
     end
-    
+
     it "can be initialized with name and bytes and type" do
       file = FakeFtp::File.new('filename', 104, :passive)
       file.name.should == 'filename'
       file.bytes.should == 104
       file.instance_variable_get(:@type).should == :passive
+    end
+
+    it "can be initialized with name and bytes and type and last_modified_time" do
+      time = Time.now
+      file = FakeFtp::File.new('filename', 104, :passive, time)
+      file.name.should == 'filename'
+      file.bytes.should == 104
+      file.instance_variable_get(:@type).should == :passive
+      file.last_modified_time.should == time
     end
   end
 

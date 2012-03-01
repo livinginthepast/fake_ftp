@@ -333,8 +333,8 @@ describe FakeFtp::Server, 'commands' do
         data = @data_client.read(2048)
         @data_client.close
         data.should == [
-          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file('some_file').created.strftime('%b %d %H:%M')}\tsome_file",
-          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file('another_file').created.strftime('%b %d %H:%M')}\tanother_file",
+            "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file('some_file').created.strftime('%b %d %H:%M')}\tsome_file",
+            "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file('another_file').created.strftime('%b %d %H:%M')}\tanother_file",
         ].join("\n")
         @client.gets.should == "226 List information transferred\r\n"
       end
@@ -351,6 +351,20 @@ describe FakeFtp::Server, 'commands' do
         @client.gets.should == "226 List information transferred\r\n"
       end
 
+      it "should allow mtime" do
+        filename = "file.txt"
+        now = Time.now
+        server.add_file(filename, "some dummy content", now)
+        @client.puts "MTIME #{filename}"
+        @client.gets.should == "150 File status ok, about to open data connection\r\n"
+
+        @data_client = TCPSocket.open('127.0.0.1', 21213)
+        data = @data_client.read(1024)
+        @data_client.close
+        data.should == now.to_s
+
+        @client.gets.should == "226 Modified information transferred\r\n"
+      end
     end
 
     context 'active' do
