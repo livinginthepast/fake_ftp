@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    fake_ftp (0.0.8)
+    fake_ftp (0.0.10)
 
 GEM
   remote: http://rubygems.org/
