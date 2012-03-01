@@ -14,6 +14,7 @@ module FakeFtp
       cdup
       dele
       list
+      mdtm
       mkd
       nlst
       pass
@@ -54,8 +55,8 @@ module FakeFtp
       @files.clear
     end
 
-    def add_file(filename, data)
-      @files << FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
+    def add_file(filename, data, last_modified_time = Time.now)
+      @files << FakeFtp::File.new(::File.basename(filename.to_s), data, @mode, last_modified_time)
     end
 
     def start
@@ -122,6 +123,7 @@ module FakeFtp
       end
     end
 
+
     ## FTP commands
     #
     #  Methods are prefixed with an underscore to avoid conflicts with internal server
@@ -167,6 +169,14 @@ module FakeFtp
       @active_connection = nil
 
       '226 List information transferred'
+    end
+
+    def _mdtm(filename = '', local = false)
+      respond_with('501 No filename given') && return if filename.empty?
+      server_file = file(filename)
+      respond_with('550 File not found') && return if server_file.nil?
+
+      respond_with("213 #{server_file.last_modified_time.strftime("%Y%m%d%H%M%S")}")
     end
 
     def _nlst(*args)
