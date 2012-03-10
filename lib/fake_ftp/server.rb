@@ -88,10 +88,10 @@ module FakeFtp
       contents = request.split
       message = contents[1..contents.length]
       case command
-        when *CMDS
-          __send__ "_#{command}", *message
-        else
-          '500 Unknown command'
+      when *CMDS
+        __send__ "_#{command}", *message
+      else
+        '500 Unknown command'
       end
     end
 
@@ -209,12 +209,12 @@ module FakeFtp
 
     def _type(type = 'A')
       case type.to_s
-        when 'A'
-          '200 Type set to A.'
-        when 'I'
-          '200 Type set to I.'
-        else
-          '504 We don\'t allow those'
+      when 'A'
+        '200 Type set to A.'
+      when 'I'
+        '200 Type set to I.'
+      else
+        '504 We don\'t allow those'
       end
     end
 
