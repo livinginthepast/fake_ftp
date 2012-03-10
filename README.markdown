@@ -78,6 +78,10 @@ Contributors
 * Colin Shield
 * liehann (https://github.com/liehann)
 
+## Build Status
+
+[![Build status](https://secure.travis-ci.org/livinginthepast/fake_ftp.png)](http://travis-ci.org/livinginthepast/fake_ftp)
+
 License
 -------
 
