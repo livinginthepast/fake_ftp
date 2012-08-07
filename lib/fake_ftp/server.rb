@@ -275,17 +275,7 @@ module FakeFtp
       respond_with('125 Do it!')
       data_client = active? ? @active_connection : @data_server.accept
 
-      data = []
-      while true
-        input = data_client.recv(1024)
-        if input.length == 0
-          break
-        end
-
-        data << input
-      end
-
-      data = data.join
+      data = data_client.read(nil)
       file = FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
       @files << file
 
