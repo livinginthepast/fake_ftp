@@ -76,7 +76,7 @@ describe FakeFtp::Server, 'files' do
 end
 
 describe FakeFtp::Server, 'commands' do
-  let(:server) { FakeFtp::Server.new(21212, 21213) }
+  let(:server) { FakeFtp::Server.new(21212, 21213, debug: true) }
   let(:client) { TCPSocket.open('127.0.0.1', 21212) }
 
   before { server.start }
@@ -230,6 +230,74 @@ describe FakeFtp::Server, 'commands' do
       client.puts "MKD some_dir"
       client.gets.should == "500 Unknown command\r\n"
     end
+
+    it "accepts RNFR with filename" do
+      client.puts "RNFR some_other_file"
+      puts "3 accepts RNFR with filename" 
+      client.gets.should == "350 Send RNTO to complete rename.\r\n"
+      puts "4 accepts RNFR with filename" 
+    end
+
+=begin
+      it "accepts RNFR without filename" do
+        client.puts "PORT 127,0,0,1,82,224"
+        client.gets.should == "200 Okay\r\n"
+
+        client.puts "RNFR"
+        client.gets.should == "501 Send pathname.\r\n"
+      end
+
+      it "accepts RNTO without RNFR" do
+      puts "accepts RNTO without RNFR"
+        client.puts "PORT 127,0,0,1,82,224"
+        client.gets.should == "200 Okay\r\n"
+
+        client.puts "RNTO some_other_file"
+        client.gets.should == "503 Send RNFR first.\r\n"
+      end
+
+      it "accepts RNTO and RNFR without filename" do
+      puts "accepts RNTO and RNFR without filename" 
+        client.puts "PORT 127,0,0,1,82,224"
+        client.gets.should == "200 Okay\r\n"
+
+        client.puts "RNFR from_file"
+        client.gets.should == "350 Send RNTO to complete rename.\r\n"
+
+        client.puts "RNFR"
+        client.gets.should == "501 Send pathname.\r\n"
+      end
+
+      it "accepts RNTO and RNFR for not existing file" do
+      puts "accepts RNTO and RNFR for not existing file" 
+        client.puts "PORT 127,0,0,1,82,224"
+        client.gets.should == "200 Okay\r\n"
+
+        client.puts "RNFR from_file"
+        client.gets.should == "350 Send RNTO to complete rename.\r\n"
+
+        client.puts "RNFR to_file"
+        client.gets.should == "550 File not found.\r\n"
+      end
+
+      it "accepts RNTO and RNFR" do
+      puts "accepts RNTO and RNFR" 
+        client.puts "PORT 127,0,0,1,82,224"
+        client.gets.should == "200 Okay\r\n"
+
+        server.add_file('from_file', '1234567890')
+
+        client.puts "RNFR from_file"
+        client.gets.should == "350 Send RNTO to complete rename.\r\n"
+
+        client.puts "RNFR to_file"
+        client.gets.should == "250 Path renamed.\r\n"
+
+        server.files.should include('to_file')
+        server.files.should_not include('from_file')
+      end
+=end
+
   end
 
   context 'file commands' do
