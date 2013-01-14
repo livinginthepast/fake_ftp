@@ -77,7 +77,7 @@ end
 
 describe FakeFtp::Server, 'commands' do
   let(:server) { FakeFtp::Server.new(21212, 21213) }
-  let(:client) { TCPSocket.open('127.0.0.1', 21212) }
+  let(:client) { puts "client OPEN"; c = TCPSocket.open('127.0.0.1', 21212); puts "client OPENED"; c }
 
   before { server.start }
   after {
@@ -230,6 +230,51 @@ describe FakeFtp::Server, 'commands' do
       client.puts "MKD some_dir"
       client.gets.should == "500 Unknown command\r\n"
     end
+
+    it "accepts RNFR with filename" do
+      client.puts "RNFR some_other_file"
+      client.gets.should == "350 Send RNTO to complete rename.\r\n"
+    end
+
+    it "accepts RNFR without filename" do
+      client.puts "RNFR"
+      client.gets.should == "501 Send path name.\r\n"
+    end
+
+    it "accepts RNTO without RNFR" do
+      client.puts "RNTO some_other_file"
+      client.gets.should == "503 Send RNFR first.\r\n"
+    end
+
+    it "accepts RNTO and RNFR without filename" do
+      client.puts "RNFR from_file"
+      client.gets.should == "350 Send RNTO to complete rename.\r\n"
+
+      client.puts "RNTO"
+      client.gets.should == "501 Send path name.\r\n"
+    end
+
+    it "accepts RNTO and RNFR for not existing file" do
+      client.puts "RNFR from_file"
+      client.gets.should == "350 Send RNTO to complete rename.\r\n"
+
+      client.puts "RNTO to_file"
+      client.gets.should == "550 File not found.\r\n"
+    end
+
+    it "accepts RNTO and RNFR" do
+      server.add_file('from_file', '1234567890')
+
+      client.puts "RNFR from_file"
+      client.gets.should == "350 Send RNTO to complete rename.\r\n"
+
+      client.puts "RNTO to_file"
+      client.gets.should == "250 Path renamed.\r\n"
+
+      server.files.should include('to_file')
+      server.files.should_not include('from_file')
+    end
+
   end
 
   context 'file commands' do

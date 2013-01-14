@@ -1,6 +1,7 @@
 require 'socket'
 require 'thread'
 require 'timeout'
+require 'active_support/core_ext/object/blank'
 
 module FakeFtp
   class Server
@@ -8,7 +9,7 @@ module FakeFtp
     attr_accessor :port, :passive_port
     attr_reader :mode
 
-    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user]
+    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr rnfr rnto type user]
     LNBK = "\r\n"
 
     def initialize(control_port = 21, data_port = nil, options = {})
@@ -190,6 +191,28 @@ module FakeFtp
       data_client.close
       @active_connection = nil
       '226 File transferred'
+    end
+
+    def _rnfr(rename_from=nil)
+      return '501 Send path name.' if rename_from.blank?
+
+      @rename_from = rename_from
+      '350 Send RNTO to complete rename.'
+    end
+
+    def _rnto(rename_to='')
+      return '501 Send path name.' if rename_to.blank?
+        
+      return '503 Send RNFR first.' unless @rename_from
+
+      if file = file(@rename_from)
+        file.name = rename_to
+        @rename_from = nil
+        '250 Path renamed.'
+      else
+        @rename_from = nil
+        '550 File not found.'
+      end
     end
 
     def _stor(filename = '')
