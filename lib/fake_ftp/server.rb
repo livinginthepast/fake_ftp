@@ -1,6 +1,7 @@
 require 'socket'
 require 'thread'
 require 'timeout'
+require 'active_support/core_ext/object/blank'
 
 module FakeFtp
   class Server
@@ -192,7 +193,7 @@ module FakeFtp
       '226 File transferred'
     end
 
-    def _rnfr(rename_from='')
+    def _rnfr(rename_from=nil)
       return '501 Send path name.' if rename_from.blank?
 
       @rename_from = rename_from
@@ -202,7 +203,7 @@ module FakeFtp
     def _rnto(rename_to='')
       return '501 Send path name.' if rename_to.blank?
         
-      return '503 Send RNFR first' unless @rename_from
+      return '503 Send RNFR first.' unless @rename_from
 
       if file = file(@rename_from)
         file.name = rename_to
