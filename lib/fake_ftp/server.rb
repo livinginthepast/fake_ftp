@@ -51,13 +51,13 @@ module FakeFtp
               respond_with parse(input) if input
             end
             unless @client.nil?
-              @client.close
+              @client.close unless @client.closed?
               @client = nil
             end
           end
         end
         unless @server.nil?
-          @server.close
+          @server.close unless @server.closed?
           @server = nil
         end
       end
