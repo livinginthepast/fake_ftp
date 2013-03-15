@@ -43,18 +43,23 @@ module FakeFtp
       @server = ::TCPServer.new('127.0.0.1', port)
       @thread = Thread.new do
         while @started
-          @client = @server.accept
+          @client = @server.accept rescue nil
           respond_with('220 Can has FTP?')
           @connection = Thread.new(@client) do |socket|
             while @started && !socket.nil? && !socket.closed?
-              respond_with parse(socket.gets)
+              input = socket.gets rescue nil
+              respond_with parse(input) if input
             end
-            @client.close
-            @client = nil
+            unless @client.nil?
+              @client.close
+              @client = nil
+            end
           end
         end
-        @server.close
-        @server = nil
+        unless @server.nil?
+          @server.close
+          @server = nil
+        end
       end
 
       if passive_port
