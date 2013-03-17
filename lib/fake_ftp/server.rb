@@ -44,15 +44,17 @@ module FakeFtp
       @thread = Thread.new do
         while @started
           @client = @server.accept rescue nil
-          respond_with('220 Can has FTP?')
-          @connection = Thread.new(@client) do |socket|
-            while @started && !socket.nil? && !socket.closed?
-              input = socket.gets rescue nil
-              respond_with parse(input) if input
-            end
-            unless @client.nil?
-              @client.close unless @client.closed?
-              @client = nil
+          if @client
+            respond_with('220 Can has FTP?')
+            @connection = Thread.new(@client) do |socket|
+              while @started && !socket.nil? && !socket.closed?
+                input = socket.gets rescue nil
+                respond_with parse(input) if input
+              end
+              unless @client.nil?
+                @client.close unless @client.closed?
+                @client = nil
+              end
             end
           end
         end
