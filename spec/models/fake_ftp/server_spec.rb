@@ -298,6 +298,18 @@ describe FakeFtp::Server, 'commands' do
         client.gets.should == "226 File transferred\r\n"
       end
 
+      it "accepts DELE with a filename" do
+        server.add_file('some_file', '1234567890')
+        client.puts "DELE some_file"
+        client.gets.should == "250 Delete operation successful.\r\n"
+        server.files.should_not include('some_file')
+      end
+
+      it "gives error message when trying to delete a file that does not exist" do
+        client.puts "DELE non_existing_file"
+        client.gets.should == "550 Delete operation failed.\r\n"
+      end
+
       it "accepts a LIST command" do
         server.add_file('some_file', '1234567890')
         server.add_file('another_file', '1234567890')

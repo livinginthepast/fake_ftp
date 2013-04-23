@@ -8,7 +8,7 @@ module FakeFtp
     attr_accessor :port, :passive_port
     attr_reader :mode
 
-    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user]
+    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user dele]
     LNBK = "\r\n"
 
     def initialize(control_port = 21, data_port = nil, options = {})
@@ -212,6 +212,15 @@ module FakeFtp
       data_client.close
       @active_connection = nil
       '226 Did it!'
+    end
+
+    def _dele(filename = '')
+      files_to_delete = @files.select{ |file| file.name == filename }
+      return '550 Delete operation failed.' if files_to_delete.count == 0
+
+      @files = @files - files_to_delete
+
+      '250 Delete operation successful.'
     end
 
     def _type(type = 'A')
