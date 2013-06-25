@@ -278,6 +278,15 @@ describe FakeFtp::Server, 'commands' do
         # server.file('some_file').bytes.should == 10
       end
 
+      it "accepts STOR with filename and long file" do
+        client.puts "STOR some_file"
+        client.gets.should == "125 Do it!\r\n"
+        data_client.puts("1234567890" * 10_000)
+        data_client.close
+        client.gets.should == "226 Did it!\r\n"
+        server.files.should include('some_file')
+      end
+
       it "does not accept RETR without a filename" do
         client.puts "RETR"
         client.gets.should == "501 No filename given\r\n"
