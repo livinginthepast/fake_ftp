@@ -19,49 +19,51 @@ Usage
 -----
 
 To test passive upload:
+``` ruby
+require 'fake_ftp'
+require 'net/ftp'
 
-    require 'fake_ftp'
-    require 'net/ftp'
+server = FakeFtp::Server.new(21212, 21213)
+## 21212 is the control port, which is used by FTP for the primary connection
+## 21213 is the data port, used in FTP passive mode to send file contents
+server.start
 
-    server = FakeFtp::Server.new(21212, 21213)
-    ## 21212 is the control port, which is used by FTP for the primary connection
-    ## 21213 is the data port, used in FTP passive mode to send file contents
-    server.start
+ftp = Net::FTP.new
+ftp.connect('127.0.0.1', 21212)
+ftp.login('user', 'password')
+ftp.passive = true
+ftp.put('some_file.txt')
+ftp.close
 
-    ftp = Net::FTP.new
-    ftp.connect('127.0.0.1', 21212)
-    ftp.login('user', 'password')
-    ftp.passive = true
-    ftp.put('some_file.txt')
-    ftp.close
+server.files.should include('some_file.txt')
+server.file('some_file.txt').bytes.should == 25
+server.file('some_file.txt').should be_passive
+server.file('some_file.txt').should_not be_active
 
-    server.files.should include('some_file.txt')
-    server.file('some_file.txt').bytes.should == 25
-    server.file('some_file.txt').should be_passive
-    server.file('some_file.txt').should_not be_active
-
-    server.stop
+server.stop
+```
 
 To test active upload:
+``` ruby
+server = FakeFtp::Server.new(21212)
+## 21212 is the control port, which is used by FTP for the primary connection
+## 21213 is the data port, used in FTP passive mode to send file contents
+server.start
 
-    server = FakeFtp::Server.new(21212)
-    ## 21212 is the control port, which is used by FTP for the primary connection
-    ## 21213 is the data port, used in FTP passive mode to send file contents
-    server.start
+ftp = Net::FTP.new
+ftp.connect('127.0.0.1', 21212)
+ftp.login('user', 'password')
+ftp.passive = false
+ftp.put('some_file.txt')
+ftp.close
 
-    ftp = Net::FTP.new
-    ftp.connect('127.0.0.1', 21212)
-    ftp.login('user', 'password')
-    ftp.passive = false
-    ftp.put('some_file.txt')
-    ftp.close
+server.files.should include('some_file.txt')
+server.file('some_file.txt').bytes.should == 25
+server.file('some_file.txt').should be_active
+server.file('some_file.txt').should_not be_passive
 
-    server.files.should include('some_file.txt')
-    server.file('some_file.txt').bytes.should == 25
-    server.file('some_file.txt').should be_active
-    server.file('some_file.txt').should_not be_passive
-
-    server.stop
+server.stop
+```
 
 Note that many FTP clients default to active, unless specified otherwise.
 
