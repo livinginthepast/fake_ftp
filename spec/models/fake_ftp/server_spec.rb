@@ -324,6 +324,23 @@ describe FakeFtp::Server, 'commands' do
         client.gets.should == "226 List information transferred\r\n"
       end
 
+      it "accepts a LIST command with a mask argument" do
+        files = ['test.jpg', 'test-2.jpg', 'test.txt']
+        files.each do |file|
+          server.add_file(file, '1234567890')
+        end
+
+        client.puts "LIST *.jpg"
+        client.gets.should == "150 Listing status ok, about to open data connection\r\n"
+
+        data = data_client.read(2048)
+        data_client.close
+        data.should == files[0,2].map do |file|
+          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file(file).created.strftime('%b %d %H:%M')}\t#{file}"
+        end.join("\n")
+        client.gets.should == "226 List information transferred\r\n"
+      end
+
       it "accepts an NLST command" do
         server.add_file('some_file', '1234567890')
         server.add_file('another_file', '1234567890')
