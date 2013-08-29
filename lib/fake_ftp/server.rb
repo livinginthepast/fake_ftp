@@ -117,8 +117,10 @@ module FakeFtp
     alias :_cdup :_cwd
 
     def _list(*args)
-      if args.length > 0 # TODO not sure how to implement this, maybe iterate over args?
-        mask = args[0].gsub('*', '.*') # TODO need to add more support for wildcards
+      wildcards = []
+      args.each do |arg|
+        next unless arg.include? '*'
+        wildcards << arg.gsub('*', '.*')
       end
 
       respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
@@ -127,8 +129,10 @@ module FakeFtp
       data_client = active? ? @active_connection : @data_server.accept
 
       files = @files
-      if mask
-        files = files.select { |f| f.name =~ /#{mask}/ }
+      if not wildcards.empty?
+        files = files.select do |f|
+          wildcards.any? { |wildcard| f.name =~ /#{wildcard}/ }
+        end
       end
       files = files.map do |f|
         "-rw-r--r--\t1\towner\tgroup\t#{f.bytes}\t#{f.created.strftime('%b %d %H:%M')}\t#{f.name}"

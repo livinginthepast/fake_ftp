@@ -324,13 +324,30 @@ describe FakeFtp::Server, 'commands' do
         client.gets.should == "226 List information transferred\r\n"
       end
 
-      it "accepts a LIST command with a mask argument" do
+      it "accepts a LIST command with a wildcard argument" do
         files = ['test.jpg', 'test-2.jpg', 'test.txt']
         files.each do |file|
           server.add_file(file, '1234567890')
         end
 
         client.puts "LIST *.jpg"
+        client.gets.should == "150 Listing status ok, about to open data connection\r\n"
+
+        data = data_client.read(2048)
+        data_client.close
+        data.should == files[0,2].map do |file|
+          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file(file).created.strftime('%b %d %H:%M')}\t#{file}"
+        end.join("\n")
+        client.gets.should == "226 List information transferred\r\n"
+      end
+
+      it "accepts a LIST command with multiple wildcard arguments" do
+        files = ['test.jpg', 'test.gif', 'test.txt']
+        files.each do |file|
+          server.add_file(file, '1234567890')
+        end
+
+        client.puts "LIST *.jpg *.gif"
         client.gets.should == "150 Listing status ok, about to open data connection\r\n"
 
         data = data_client.read(2048)
