@@ -8,7 +8,23 @@ module FakeFtp
     attr_accessor :port, :passive_port
     attr_reader :mode
 
-    CMDS = %w[acct cwd cdup list nlst pass pasv port pwd quit stor retr type user dele]
+    CMDS = %w(
+      acct
+      cwd
+      cdup
+      dele
+      list
+      nlst
+      pass
+      pasv
+      port
+      pwd
+      quit
+      stor
+      retr
+      type
+      user
+    )
     LNBK = "\r\n"
 
     def initialize(control_port = 21, data_port = nil, options = {})
