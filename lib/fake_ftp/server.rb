@@ -117,14 +117,27 @@ module FakeFtp
     alias :_cdup :_cwd
 
     def _list(*args)
+      wildcards = []
+      args.each do |arg|
+        next unless arg.include? '*'
+        wildcards << arg.gsub('*', '.*')
+      end
+
       respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
 
       respond_with('150 Listing status ok, about to open data connection')
       data_client = active? ? @active_connection : @data_server.accept
 
-      data_client.write(@files.map do |f|
+      files = @files
+      if not wildcards.empty?
+        files = files.select do |f|
+          wildcards.any? { |wildcard| f.name =~ /#{wildcard}/ }
+        end
+      end
+      files = files.map do |f|
         "-rw-r--r--\t1\towner\tgroup\t#{f.bytes}\t#{f.created.strftime('%b %d %H:%M')}\t#{f.name}"
-      end.join("\n"))
+      end
+      data_client.write(files.join("\n"))
       data_client.close
       @active_connection = nil
 
