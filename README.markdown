@@ -1,22 +1,21 @@
 FakeFtp
 =======
 
+[![Build status](https://secure.travis-ci.org/livinginthepast/fake_ftp.png)](http://travis-ci.org/livinginthepast/fake_ftp)
+
 This is a gem that allows you to test FTP implementations in ruby. It is a minimal single-client FTP server
 that can be bound to any arbitrary port on localhost.
 
-Why?
-----
+## Why?
 
 We want to ensure that our code works, in a way that is agnostic to the implementation used (unlike with stubs or mocks).
 
-How
----
+## How
 
 FakeFtp is a simple FTP server that fakes out enough of the protocol to get us by, allowing us to test that files get to
 their intended destination rather than testing how our code does so.
 
-Usage
------
+## Usage
 
 To test passive upload:
 ``` ruby
@@ -67,25 +66,18 @@ server.stop
 
 Note that many FTP clients default to active, unless specified otherwise.
 
-References
-----------
+## References
 
 * http://rubyforge.org/projects/ftpd/ - a simple ftp daemon written by Chris Wanstrath
 * http://ruby-doc.org/stdlib/libdoc/gserver/rdoc/index.html - a generic server in the Ruby standard library, by John W Small
 
-Contributors
-------------
+## Contributors
 
 * Eric Saxby
 * Colin Shield
 * liehann (https://github.com/liehann)
 
-## Build Status
-
-[![Build status](https://secure.travis-ci.org/livinginthepast/fake_ftp.png)](http://travis-ci.org/livinginthepast/fake_ftp)
-
-License
--------
+## License
 
 The MIT License
 
