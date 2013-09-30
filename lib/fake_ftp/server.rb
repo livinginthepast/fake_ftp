@@ -237,6 +237,28 @@ module FakeFtp
       '226 File transferred'
     end
 
+    def _rnfr(rename_from='')
+      return '501 Send path name.' if rename_from.nil? || rename_from.size < 1
+
+      @rename_from = rename_from
+      '350 Send RNTO to complete rename.'
+    end
+
+    def _rnto(rename_to='')
+      return '501 Send path name.' if rename_to.nil? || rename_to.size < 1
+
+      return '503 Send RNFR first.' unless @rename_from
+
+      if file = file(@rename_from)
+        file.name = rename_to
+        @rename_from = nil
+        '250 Path renamed.'
+      else
+        @rename_from = nil
+        '550 File not found.'
+      end
+    end
+
     def _stor(filename = '')
       respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
 
@@ -284,18 +306,6 @@ module FakeFtp
 
     def _user(name = '')
       (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
-    end
-
-    def _rnfr(name = nil)
-      @rnfr_file = file(name)
-
-      '350 Waiting for rnto'
-    end
-
-    def _rnto(name = nil)
-      @rnfr_file.name = name
-
-      '250 OK!'
     end
 
     def _mkd(directory)

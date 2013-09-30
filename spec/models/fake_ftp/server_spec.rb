@@ -452,19 +452,43 @@ describe FakeFtp::Server, 'commands' do
         client.gets.should == "226 File transferred\r\n"
       end
 
-      it 'can rename with RNFR and RNTO' do
-        client.puts "PORT 127,0,0,1,82,224"
-        client.gets.should == "200 Okay\r\n"
+      it "accepts RNFR without filename" do
+        client.puts "RNFR"
+        client.gets.should == "501 Send path name.\r\n"
+      end
 
-        server.add_file('some_file', '1234567890')
-        server.add_file('another_file', '1234567890')
+      it "accepts RNTO without RNFR" do
+        client.puts "RNTO some_other_file"
+        client.gets.should == "503 Send RNFR first.\r\n"
+      end
 
-        client.puts "RNFR some_file"
-        client.gets.should == "350 Waiting for rnto\r\n"
-        client.puts "RNTO some_file_renamed"
-        client.gets.should == "250 OK!\r\n"
+      it "accepts RNTO and RNFR without filename" do
+        client.puts "RNFR from_file"
+        client.gets.should == "350 Send RNTO to complete rename.\r\n"
 
-        server.files.should == ["some_file_renamed", "another_file"]
+        client.puts "RNTO"
+        client.gets.should == "501 Send path name.\r\n"
+      end
+
+      it "accepts RNTO and RNFR for not existing file" do
+        client.puts "RNFR from_file"
+        client.gets.should == "350 Send RNTO to complete rename.\r\n"
+
+        client.puts "RNTO to_file"
+        client.gets.should == "550 File not found.\r\n"
+      end
+
+      it "accepts RNTO and RNFR" do
+        server.add_file('from_file', '1234567890')
+
+        client.puts "RNFR from_file"
+        client.gets.should == "350 Send RNTO to complete rename.\r\n"
+
+        client.puts "RNTO to_file"
+        client.gets.should == "250 Path renamed.\r\n"
+
+        server.files.should include('to_file')
+        server.files.should_not include('from_file')
       end
 
       it "accepts an NLST command" do
