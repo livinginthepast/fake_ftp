@@ -270,7 +270,20 @@ describe FakeFtp::Server, 'commands' do
         data_client.close
         client.gets.should == "226 Did it!\r\n"
         server.files.should include('some_file')
-        # server.file('some_file').bytes.should == 10
+        server.file('some_file').bytes.should == 10
+        server.file('some_file').data.should == "1234567890"
+      end
+
+      it "accepts STOR with filename and trailing newline" do
+        client.puts "STOR some_file"
+        client.gets
+        # puts tries to be smart and only write a single \n
+        data_client.puts "1234567890\n\n"
+        data_client.close
+        client.gets.should == "226 Did it!\r\n"
+        server.files.should include('some_file')
+        server.file('some_file').bytes.should == 11
+        server.file('some_file').data.should == "1234567890\n"
       end
 
       it "accepts STOR with filename and long file" do
