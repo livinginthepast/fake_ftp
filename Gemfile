@@ -5,4 +5,5 @@ gemspec
 
 group :test do
   gem "guard-rspec"
+  gem 'pry-nav'
 end
