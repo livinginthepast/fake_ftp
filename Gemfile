@@ -4,6 +4,9 @@ source "http://rubygems.org"
 gemspec
 
 group :test do
+  gem "rspec", '>2'
+  gem "rake", '>=0.8.7'
+
   gem "guard-rspec"
   gem 'pry-nav'
 end
