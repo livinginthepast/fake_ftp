@@ -8,63 +8,63 @@ describe FakeFtp::File do
 
     it "has a name attribute" do
       @file.name = "some name"
-      @file.name.should == "some name"
+      expect(@file.name).to eql("some name")
     end
 
     it "has a last_modified_time attribute" do
       now = Time.now
       @file.last_modified_time = now
-      @file.last_modified_time.should == now
+      expect(@file.last_modified_time).to eql(now)
     end
 
     it "has a bytes attribute" do
       @file.bytes = 87
-      @file.bytes.should == 87
+      expect(@file.bytes).to eql(87)
     end
 
     it "has a data attribute" do
       @file.data = 'some data'
-      @file.data.should == 'some data'
-      @file.bytes.should == 'some data'.length
+      expect(@file.data).to eql('some data')
+      expect(@file.bytes).to eql('some data'.length)
     end
   end
 
   context 'setup' do
     it "can be initialized without attributes" do
       file = FakeFtp::File.new
-      file.name.should be_nil
-      file.bytes.should be_nil
-      file.instance_variable_get(:@type).should be_nil
+      expect(file.name).to be_nil
+      expect(file.bytes).to be_nil
+      expect(file.instance_variable_get(:@type)).to be_nil
     end
 
     it "can be initialized with name" do
       file = FakeFtp::File.new('filename')
-      file.name.should == 'filename'
-      file.bytes.should be_nil
-      file.instance_variable_get(:@type).should be_nil
+      expect(file.name).to eql('filename')
+      expect(file.bytes).to be_nil
+      expect(file.instance_variable_get(:@type)).to be_nil
     end
 
     it "can be initialized with name and bytes" do
       file = FakeFtp::File.new('filename', 104)
-      file.name.should == 'filename'
-      file.bytes.should == 104
-      file.instance_variable_get(:@type).should be_nil
+      expect(file.name).to eql('filename')
+      expect(file.bytes).to eql(104)
+      expect(file.instance_variable_get(:@type)).to be_nil
     end
 
     it "can be initialized with name and bytes and type" do
       file = FakeFtp::File.new('filename', 104, :passive)
-      file.name.should == 'filename'
-      file.bytes.should == 104
-      file.instance_variable_get(:@type).should == :passive
+      expect(file.name).to eql('filename')
+      expect(file.bytes).to eql(104)
+      expect(file.instance_variable_get(:@type)).to eql(:passive)
     end
 
     it "can be initialized with name and bytes and type and last_modified_time" do
       time = Time.now
       file = FakeFtp::File.new('filename', 104, :passive, time)
-      file.name.should == 'filename'
-      file.bytes.should == 104
-      file.instance_variable_get(:@type).should == :passive
-      file.last_modified_time.should == time
+      expect(file.name).to eql('filename')
+      expect(file.bytes).to eql(104)
+      expect(file.instance_variable_get(:@type)).to eql(:passive)
+      expect(file.last_modified_time).to eql(time)
     end
   end
 
@@ -75,12 +75,12 @@ describe FakeFtp::File do
 
     it "should be true if type is :passive" do
       @file.type = :passive
-      @file.passive?.should be_true
+      expect(@file.passive?).to be_true
     end
 
     it "should be false if type is :active" do
       @file.type = :active
-      @file.passive?.should be_false
+      expect(@file.passive?).to be_false
     end
   end
 
@@ -91,12 +91,12 @@ describe FakeFtp::File do
 
     it "should be true if type is :active" do
       @file.type = :active
-      @file.active?.should be_true
+      expect(@file.active?).to be_true
     end
 
     it "should be false if type is :passive" do
       @file.type = :passive
-      @file.active?.should be_false
+      expect(@file.active?).to be_false
     end
   end
 end
