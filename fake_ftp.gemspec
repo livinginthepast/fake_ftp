@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.description = %q{Testing FTP? Use this!}
 
   s.required_rubygems_version = ">= 1.3.6"
-  s.rubyforge_project = "fake_ftp"
   
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
