@@ -71,12 +71,6 @@ Note that many FTP clients default to active, unless specified otherwise.
 * http://rubyforge.org/projects/ftpd/ - a simple ftp daemon written by Chris Wanstrath
 * http://ruby-doc.org/stdlib/libdoc/gserver/rdoc/index.html - a generic server in the Ruby standard library, by John W Small
 
-## Contributors
-
-* Eric Saxby
-* Colin Shield
-* liehann (https://github.com/liehann)
-
 ## License
 
 The MIT License
