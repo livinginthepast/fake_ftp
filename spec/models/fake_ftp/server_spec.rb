@@ -80,13 +80,13 @@ describe FakeFtp::Server, 'commands' do
   let(:client) { TCPSocket.open('127.0.0.1', 21212) }
 
   before { server.start }
+
   after {
     client.close
     server.stop
   }
 
   context 'general' do
-
     it "should accept connections" do
       expect(client.gets).to eql("220 Can has FTP?\r\n")
     end
@@ -116,7 +116,6 @@ describe FakeFtp::Server, 'commands' do
   end
 
   context 'passive' do
-
     it "accepts PASV" do
       expect(server.mode).to eql(:active)
       client.gets
@@ -145,20 +144,19 @@ describe FakeFtp::Server, 'commands' do
   end
 
   context 'active' do
+    let!(:data_server) { ::TCPServer.new('127.0.0.1', 21216) }
+
     before :each do
       client.gets
 
-      @data_server = ::TCPServer.new('127.0.0.1', 21216)
       @data_connection = Thread.new do
-        @server_client = @data_server.accept
+        @server_client = data_server.accept
         expect(@server_client).to_not be_nil
       end
     end
 
     after :each do
-      @data_server.close
-      @data_server = nil
-      @data_connection = nil
+      data_server.close
     end
 
     it "accepts PORT and connects to port" do
@@ -408,17 +406,17 @@ describe FakeFtp::Server, 'commands' do
     end
 
     context 'active' do
+      let!(:data_server) { ::TCPServer.new('127.0.0.1', 21216) }
+
       before :each do
-        @data_server = ::TCPServer.new('127.0.0.1', 21216)
         @data_connection = Thread.new do
-          @server_client = @data_server.accept
+          @server_client = data_server.accept
         end
       end
 
       after :each do
-        @data_server.close
+        data_server.close
         @data_connection = nil
-        @data_server = nil
       end
 
       it 'creates a directory on MKD' do
