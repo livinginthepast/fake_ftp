@@ -1,7 +1,7 @@
 require 'socket'
 require 'thread'
 require 'timeout'
-require 'fake_ftp/commands'
+require 'fake_ftp/command'
 
 module FakeFtp
   class Server
@@ -56,7 +56,7 @@ module FakeFtp
             @connection = Thread.new(self.client) do |socket|
               while @started && !socket.nil? && !socket.closed?
                 input = socket.gets rescue nil
-                respond_with parse(input) if input
+                respond_with FakeFtp::Command.process(self, input) if input
               end
               close_connection!
             end
@@ -95,22 +95,6 @@ module FakeFtp
     end
 
     private
-
-    def parse(request)
-      return if request.nil?
-      puts request if @options[:debug]
-      command = request[0, 4].downcase.strip
-      contents = request.split
-      message = contents[1..contents.length]
-
-      command_class = FakeFtp::Command.find(command)
-
-      if command_class
-        command_class.new(self).run(*message)
-      else
-        '500 Unknown command'
-      end
-    end
 
     def port_is_open?(port)
       begin
