@@ -3,17 +3,23 @@ FakeFtp
 
 [![Build status](https://secure.travis-ci.org/livinginthepast/fake_ftp.png)](http://travis-ci.org/livinginthepast/fake_ftp)
 
-This is a gem that allows you to test FTP implementations in ruby. It is a minimal single-client FTP server
-that can be bound to any arbitrary port on localhost.
+This is a gem that allows you to test FTP implementations in ruby. It is 
+a minimal single-client FTP server that can be bound to any arbitrary 
+port on localhost.
+
 
 ## Why?
 
-We want to ensure that our code works, in a way that is agnostic to the implementation used (unlike with stubs or mocks).
+We want to ensure that our code works, in a way that is agnostic to the 
+implementation used (unlike with stubs or mocks).
+
 
 ## How
 
-FakeFtp is a simple FTP server that fakes out enough of the protocol to get us by, allowing us to test that files get to
-their intended destination rather than testing how our code does so.
+FakeFtp is a simple FTP server that fakes out enough of the protocol to 
+get us by, allowing us to test that files get to their intended destination 
+rather than testing how our code does so.
+
 
 ## Usage
 
@@ -65,6 +71,38 @@ server.stop
 ```
 
 Note that many FTP clients default to active, unless specified otherwise.
+
+
+## Caveats
+
+This is *not* a real FTP server and should not be treated as one. The goal 
+of this gem is not to create a thread-safe multi-client implementation.
+It is best used to unit test models that generate files and transfer
+them to an FTP server.
+
+As such, there are some things that won't be accepted upstream from pull
+requests:
+* simultaneous multi-client code
+* support for long term file persistence
+* binding to arbitrary IPs
+* global state beyond that required to pass the minimum required to
+  generate passing tests
+
+
+## Recommendations for testing patterns
+
+*Separate configuration from code.* Do not hard code the IP address,
+FQDN or port of an FTP server in your classes. It introduces fragility
+into your tests. Also, the default FTP port of 21 is a privileged port,
+and should be avoided.
+
+*Separate the code that generates files from the code that uploads
+files.* You tests will run much more quickly if you only try to upload
+small files. If you have tests showing that you generate correct files
+from your data, then you can trust that. Why do you need to upload a 20M
+file in your tests if you can stub out your file generation method and
+test file upload against 10 bytes? Fast fast fast.
+
 
 ## References
 
