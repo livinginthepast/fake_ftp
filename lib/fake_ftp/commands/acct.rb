@@ -1,7 +1,13 @@
-class FakeFtp::Command::Acct < Base
+require 'fake_ftp/commands/base'
 
-  def run(*args)
-    '230 WHATEVER!'
+module FakeFtp
+  module Command
+    class Acct < Base
+
+      def run(*args)
+        '230 WHATEVER!'
+      end
+
+    end
   end
-
 end

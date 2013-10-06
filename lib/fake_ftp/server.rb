@@ -6,7 +6,7 @@ require 'fake_ftp/command'
 module FakeFtp
   class Server
 
-    attr_accessor :client, :files, :mode, :path, :port, :passive_port
+    attr_accessor :client, :mode, :path, :port, :passive_port
 
     LNBK = "\r\n"
 
@@ -24,6 +24,10 @@ module FakeFtp
 
     def file(name)
       @files.detect { |file| file.name == name }
+    end
+
+    def files
+      @files.map(&:name)
     end
 
     def reset
