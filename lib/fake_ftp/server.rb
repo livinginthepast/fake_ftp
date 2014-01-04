@@ -162,9 +162,9 @@ module FakeFtp
         end
       end
       files = files.map do |f|
-        "-rw-r--r--\t1\towner\tgroup\t#{f.bytes}\t#{f.created.strftime('%b %d %H:%M')}\t#{f.name}"
+        "-rw-r--r--\t1\towner\tgroup\t#{f.bytes}\t#{f.created.strftime('%b %d %H:%M')}\t#{f.name}\n"
       end
-      data_client.write(files.join("\n"))
+      data_client.write(files.join)
       data_client.close
       @active_connection = nil
 
