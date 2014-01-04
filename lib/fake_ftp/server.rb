@@ -34,8 +34,8 @@ module FakeFtp
     def initialize(control_port = 21, data_port = nil, options = {})
       self.port = control_port
       self.passive_port = data_port
-      raise(Errno::EADDRINUSE, "#{port}") if is_running?
-      raise(Errno::EADDRINUSE, "#{passive_port}") if passive_port && is_running?(passive_port)
+      raise(Errno::EADDRINUSE, "#{port}") if !control_port.zero? && is_running?
+      raise(Errno::EADDRINUSE, "#{passive_port}") if passive_port && !passive_port.zero? && is_running?(passive_port)
       @connection = nil
       @options = options
       @files = []
@@ -62,6 +62,7 @@ module FakeFtp
     def start
       @started = true
       @server = ::TCPServer.new('127.0.0.1', port)
+      @port = @server.addr[1]
       @thread = Thread.new do
         while @started
           @client = @server.accept rescue nil
@@ -87,6 +88,7 @@ module FakeFtp
 
       if passive_port
         @data_server = ::TCPServer.new('127.0.0.1', passive_port)
+        @passive_port = @data_server.addr[1]
       end
     end
 
