@@ -11,6 +11,7 @@ Gem::Specification.new do |s|
   s.homepage    = "http://rubygems.org/gems/fake_ftp"
   s.summary     = %q{Creates a fake FTP server for use in testing}
   s.description = %q{Testing FTP? Use this!}
+  s.license     = 'MIT'
 
   s.required_rubygems_version = ">= 1.3.6"
   
