@@ -270,9 +270,9 @@ describe FakeFtp::Server, 'commands' do
         data = data_client.read(2048)
         data_client.close
         expect(data).to eql([
-          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file('some_file').created.strftime('%b %d %H:%M')}\tsome_file",
-          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file('another_file').created.strftime('%b %d %H:%M')}\tanother_file",
-        ].join("\n"))
+          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file('some_file').created.strftime('%b %d %H:%M')}\tsome_file\n",
+          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file('another_file').created.strftime('%b %d %H:%M')}\tanother_file\n",
+        ].join)
         expect(client.gets).to eql("226 List information transferred\r\n")
       end
 
@@ -288,8 +288,8 @@ describe FakeFtp::Server, 'commands' do
         data = data_client.read(2048)
         data_client.close
         expect(data).to eql(files[0,2].map do |file|
-          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file(file).created.strftime('%b %d %H:%M')}\t#{file}"
-        end.join("\n"))
+          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file(file).created.strftime('%b %d %H:%M')}\t#{file}\n"
+        end.join)
         expect(client.gets).to eql("226 List information transferred\r\n")
       end
 
@@ -305,8 +305,8 @@ describe FakeFtp::Server, 'commands' do
         data = data_client.read(2048)
         data_client.close
         expect(data).to eql(files[0,2].map do |file|
-          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file(file).created.strftime('%b %d %H:%M')}\t#{file}"
-        end.join("\n"))
+          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file(file).created.strftime('%b %d %H:%M')}\t#{file}\n"
+        end.join)
         expect(client.gets).to eql("226 List information transferred\r\n")
       end
 
