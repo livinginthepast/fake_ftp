@@ -317,7 +317,7 @@ describe FakeFtp::Server, 'commands' do
         expect(client.gets).to eql("150 Listing status ok, about to open data connection\r\n")
         data = data_client.read(1024)
         data_client.close
-        expect(data).to eql("some_file\nanother_file")
+        expect(data).to eql("some_file\nanother_file\n")
         expect(client.gets).to eql("226 List information transferred\r\n")
       end
 
@@ -333,7 +333,7 @@ describe FakeFtp::Server, 'commands' do
         data = data_client.read(1024)
         data_client.close
 
-        expect(data).to eql("test.jpg\ntest2.jpg")
+        expect(data).to eql("test.jpg\ntest2.jpg\n")
         expect(client.gets).to eql("226 List information transferred\r\n")
       end
 
@@ -475,7 +475,7 @@ describe FakeFtp::Server, 'commands' do
         data = @server_client.read(1024)
         @server_client.close
 
-        expect(data).to eql("some_file\nanother_file")
+        expect(data).to eql("some_file\nanother_file\n")
         expect(client.gets).to eql("226 List information transferred\r\n")
       end
     end

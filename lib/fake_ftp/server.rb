@@ -181,9 +181,11 @@ module FakeFtp
       wildcards = build_wildcards(args)
       files = matching_files(@files, wildcards)
 
-      files = files.map(&:name)
+      files = files.map do |file|
+        "#{file.name}\n"
+      end
 
-      data_client.write(files.join("\n"))
+      data_client.write(files.join)
       data_client.close
       @active_connection = nil
 
