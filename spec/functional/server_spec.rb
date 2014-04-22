@@ -321,6 +321,22 @@ describe FakeFtp::Server, 'commands' do
         expect(client.gets).to eql("226 List information transferred\r\n")
       end
 
+      it "accepts an NLST command with wildcard arguments" do
+        files = ['test.jpg', 'test.txt', 'test2.jpg']
+        files.each do |file|
+          server.add_file(file, '1234567890')
+        end
+
+        client.puts "NLST *.jpg"
+
+        expect(client.gets).to eql("150 Listing status ok, about to open data connection\r\n")
+        data = data_client.read(1024)
+        data_client.close
+
+        expect(data).to eql("test.jpg\ntest2.jpg")
+        expect(client.gets).to eql("226 List information transferred\r\n")
+      end
+
       it "should allow mdtm" do
         filename = "file.txt"
         now = Time.now

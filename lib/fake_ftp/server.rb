@@ -146,23 +146,14 @@ module FakeFtp
     end
 
     def _list(*args)
-      wildcards = []
-      args.each do |arg|
-        next unless arg.include? '*'
-        wildcards << arg.gsub('*', '.*')
-      end
-
       respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
 
       respond_with('150 Listing status ok, about to open data connection')
       data_client = active? ? @active_connection : @data_server.accept
 
-      files = @files
-      if not wildcards.empty?
-        files = files.select do |f|
-          wildcards.any? { |wildcard| f.name =~ /#{wildcard}/ }
-        end
-      end
+      wildcards = build_wildcards(args)
+      files = matching_files(@files, wildcards)
+
       files = files.map do |f|
         "-rw-r--r--\t1\towner\tgroup\t#{f.bytes}\t#{f.created.strftime('%b %d %H:%M')}\t#{f.name}\n"
       end
@@ -186,6 +177,11 @@ module FakeFtp
 
       respond_with('150 Listing status ok, about to open data connection')
       data_client = active? ? @active_connection : @data_server.accept
+
+      wildcards = build_wildcards(args)
+      files = matching_files(@files, wildcards)
+
+      files = files.map(&:name)
 
       data_client.write(files.join("\n"))
       data_client.close
@@ -335,6 +331,25 @@ module FakeFtp
       end
 
       return false
+    end
+
+    def build_wildcards(args)
+      wildcards = []
+      args.each do |arg|
+        next unless arg.include? '*'
+        wildcards << arg.gsub('*', '.*')
+      end
+      wildcards
+    end
+
+    def matching_files(files, wildcards)
+      if not wildcards.empty?
+        files.select do |f|
+          wildcards.any? { |wildcard| f.name =~ /#{wildcard}/ }
+        end
+      else
+        files
+      end
     end
   end
 end
