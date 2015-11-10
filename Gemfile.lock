@@ -42,3 +42,6 @@ DEPENDENCIES
   pry-nav
   rake (>= 0.8.7)
   rspec (> 2)
+
+BUNDLED WITH
+   1.10.3
