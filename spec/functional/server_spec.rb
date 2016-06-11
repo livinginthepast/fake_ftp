@@ -192,9 +192,9 @@ describe FakeFtp::Server, 'commands' do
         data_client.puts "1234567890"
         data_client.close
         expect(client.gets).to eql("226 Did it!\r\n")
-        expect(server.files).to include('some_file')
-        expect(server.file('some_file').bytes).to eql(10)
-        expect(server.file('some_file').data).to eql("1234567890")
+        expect(server.files).to include('/pub/some_file')
+        expect(server.file('/pub/some_file').bytes).to eql(10)
+        expect(server.file('/pub/some_file').data).to eql("1234567890")
       end
 
       it "accepts STOR with filename and trailing newline" do
@@ -204,9 +204,9 @@ describe FakeFtp::Server, 'commands' do
         data_client.puts "1234567890\n\n"
         data_client.close
         expect(client.gets).to eql("226 Did it!\r\n")
-        expect(server.files).to include('some_file')
-        expect(server.file('some_file').bytes).to eql(11)
-        expect(server.file('some_file').data).to eql("1234567890\n")
+        expect(server.files).to include('/pub/some_file')
+        expect(server.file('/pub/some_file').bytes).to eql(11)
+        expect(server.file('/pub/some_file').data).to eql("1234567890\n")
       end
 
       it "accepts STOR with filename and long file" do
@@ -215,7 +215,7 @@ describe FakeFtp::Server, 'commands' do
         data_client.puts("1234567890" * 10_000)
         data_client.close
         expect(client.gets).to eql("226 Did it!\r\n")
-        expect(server.files).to include('some_file')
+        expect(server.files).to include('/pub/some_file')
       end
 
       it "accepts STOR with streams" do
@@ -227,7 +227,7 @@ describe FakeFtp::Server, 'commands' do
         data_client.flush
         data_client.close
         expect(client.gets).to eql("226 Did it!\r\n")
-        expect(server.file('some_file').data).to eql("12345678901234567890")
+        expect(server.file('/pub/some_file').data).to eql("12345678901234567890")
       end
 
       it "does not accept RETR without a filename" do
@@ -403,8 +403,8 @@ describe FakeFtp::Server, 'commands' do
         @server_client.close
 
         expect(client.gets).to eql("226 Did it!\r\n")
-        expect(server.files).to include('some_other_file')
-        expect(server.file('some_other_file').bytes).to eql(5)
+        expect(server.files).to include('/pub/some_other_file')
+        expect(server.file('/pub/some_other_file').bytes).to eql(5)
       end
 
       it "accepts RETR with a filename" do
