@@ -52,7 +52,6 @@ To test active upload:
 ``` ruby
 server = FakeFtp::Server.new(21212)
 ## 21212 is the control port, which is used by FTP for the primary connection
-## 21213 is the data port, used in FTP passive mode to send file contents
 server.start
 
 ftp = Net::FTP.new
