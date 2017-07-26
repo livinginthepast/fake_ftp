@@ -22,6 +22,7 @@ module FakeFtp
       port
       pwd
       quit
+      size
       stor
       retr
       rnfr
@@ -267,6 +268,11 @@ module FakeFtp
         @rename_from = nil
         '550 File not found.'
       end
+    end
+
+    def _size(filename)
+      file_size = file(filename).bytes
+      respond_with("213 #{file_size}")
     end
 
     def _stor(filename = '')
