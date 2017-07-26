@@ -1,5 +1,3 @@
-require 'spec_helper.rb'
-
 describe FakeFtp::Server, 'commands' do
   let(:server) { FakeFtp::Server.new(21_212, 21_213) }
   let(:client) { TCPSocket.open('127.0.0.1', 21_212) }

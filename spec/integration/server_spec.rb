@@ -1,4 +1,3 @@
-require 'spec_helper'
 require 'net/ftp'
 
 describe FakeFtp::Server, 'with ftp client' do

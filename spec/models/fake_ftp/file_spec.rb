@@ -1,5 +1,3 @@
-require 'spec_helper.rb'
-
 describe FakeFtp::File do
   context 'attributes' do
     before :each do
