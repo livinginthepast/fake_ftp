@@ -1,10 +1,13 @@
-require 'bundler'
-Bundler::GemHelper.install_tasks
+begin
+  require 'bundler'
+  require 'rspec/core/rake_task'
+  require 'rubocop/rake_task'
+rescue LoadError => e
+  warn e
+end
 
-require 'rspec/core'
-require 'rspec/core/rake_task'
+Bundler::GemHelper.install_tasks if defined?(Bundler)
+RSpec::Core::RakeTask.new if defined?(RSpec)
+RuboCop::RakeTask.new if defined?(RuboCop)
 
-RSpec::Core::RakeTask.new('spec')
-
-# If you want to make this the default task
-task :default => :spec
+task default: %i[rubocop spec]

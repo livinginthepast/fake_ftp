@@ -9,7 +9,7 @@ module FakeFtp
       @created = Time.now
       @name = name
       @data = data
-      # FIXME this is far too ambiguous. args should not mean different
+      # FIXME: this is far too ambiguous. args should not mean different
       # things in different contexts.
       data_is_bytes = (data.nil? || Integer === data)
       @bytes = data_is_bytes ? data : data.to_s.length
