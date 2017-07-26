@@ -322,6 +322,32 @@ module FakeFtp
       @mode == :active
     end
 
+    def storbinary(cmd, file, blocksize, rest_offset = nil) # :yield: data
+      if rest_offset
+        file.seek(rest_offset, IO::SEEK_SET)
+      end
+      synchronize do
+        with_binary(true) do
+          conn = transfercmd(cmd)
+          loop do
+            buf = file.read(blocksize)
+            break if buf == nil
+            conn.write(buf)
+            yield(buf) if block_given?
+          end
+          conn.close
+          voidresp
+        end
+      end
+    rescue Errno::EPIPE
+      # EPIPE, in this case, means that the data connection was unexpectedly
+      # terminated.  Rather than just raising EPIPE to the caller, check the
+      # response on the control connection.  If getresp doesn't raise a more
+      # appropriate exception, re-raise the original exception.
+      getresp
+      raise
+    end
+
     private
 
     def port_is_open?(port)
