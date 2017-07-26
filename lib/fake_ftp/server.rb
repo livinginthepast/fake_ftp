@@ -291,6 +291,7 @@ module FakeFtp
     end
 
     def _dele(filename = '')
+      filename = ::File.basename(filename)
       files_to_delete = @files.select{ |file| file.name == filename }
       return '550 Delete operation failed.' if files_to_delete.count == 0
 
