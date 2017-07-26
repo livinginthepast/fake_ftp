@@ -38,6 +38,12 @@ describe FakeFtp::Server, 'commands' do
       client.gets
       client.puts "USER thing"
     end
+
+    it "should accept SITE command" do
+      client.gets
+      client.puts "SITE umask"
+      expect(client.gets).to eql "200 umask\r\n"
+    end
   end
 
   context 'passive' do

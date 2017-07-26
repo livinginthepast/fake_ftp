@@ -71,6 +71,10 @@ describe FakeFtp::Server, 'with ftp client' do
       expect(server.file('text_file.txt')).to be_active
     end
 
+    it "should allow client to execute SITE command" do
+      expect { client.site('umask') }.to_not raise_error
+    end
+
     xit "should disconnect clients on close" do
       # TODO: when this succeeds, we can care less about manually closing clients
       #       otherwise we get a CLOSE_WAIT process hanging around that blocks our port

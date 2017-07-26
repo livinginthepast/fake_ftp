@@ -29,6 +29,7 @@ module FakeFtp
       rnto
       type
       user
+      site
     )
     LNBK = "\r\n"
 
@@ -316,6 +317,10 @@ module FakeFtp
 
     def _mkd(directory)
       "257 OK!"
+    end
+
+    def _site(command)
+      "200 #{command}"
     end
 
     def active?
