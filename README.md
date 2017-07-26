@@ -1,7 +1,7 @@
 FakeFtp
 =======
 
-[![Build status](https://secure.travis-ci.org/livinginthepast/fake_ftp.svg)](http://travis-ci.org/livinginthepast/fake_ftp)
+[![Build status](https://secure.travis-ci.org/livinginthepast/fake_ftp.svg?branch=master)](http://travis-ci.org/livinginthepast/fake_ftp)
 
 This is a gem that allows you to test FTP implementations in ruby. It is 
 a minimal single-client FTP server that can be bound to any arbitrary 
