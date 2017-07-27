@@ -11,23 +11,17 @@ RSpec.configure do |c|
 end
 
 module SpecHelper
-  def gets_with_timeout(client, timeout: 5, endwith: "\r\n", chunk: 1)
+  def gets_with_timeout(client, timeout: 5, endwith: "\r\n", chunk: 1024)
     start = Time.now
     buf = ''
-    begin
+    loop do
       if Time.now - start >= timeout
-        raise Timeout::Error, "timed out after #{timeout}s"
+        raise Timeout::Error, "client=#{client} timeout=#{timeout}s"
       end
-      loop do
-        buf += client.read_nonblock(chunk)
-        return buf if buf.end_with?(endwith)
-      end
-    rescue EOFError
-      return buf
-    rescue IO::WaitReadable, Errno::EINTR
-      IO.select([client], nil, nil, 1)
-      sleep 0.1
-      retry
+      bytes = client.read_nonblock(chunk, exception: false)
+      return buf if bytes.nil?
+      buf += bytes unless bytes == :wait_readable
+      return buf if buf.end_with?(endwith)
     end
     buf
   end
