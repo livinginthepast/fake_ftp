@@ -1,17 +1,15 @@
-describe FakeFtp::Server, 'commands' do
-  let(:server) do
-    FakeFtp::Server.new(21_212, 21_213, debug: ENV['DEBUG'] == '1')
-  end
-  let(:client) { TCPSocket.open('127.0.0.1', 21_212) }
+describe FakeFtp::Server, 'commands', functional: true do
+  let(:data_port) { rand(16_000..19_000) }
+  let(:data_addr_bits) { SpecHelper.local_addr_bits(data_port) }
+  let(:client_port) { rand(19_000..22_000) }
+  let(:client_addr_bits) { SpecHelper.local_addr_bits(client_port) }
   let(:data_server_port) { rand(22_000..24_000) }
-  let(:data_server) { TCPServer.new('127.0.0.1', data_server_port) }
-  let(:active_addr) do
-    [
-      127, 0, 0, 1,
-      data_server_port / 256,
-      data_server_port % 256
-    ].map(&:to_s).join(',')
+  let(:data_server_addr_bits) { SpecHelper.local_addr_bits(data_server_port) }
+  let(:client) { TCPSocket.open('127.0.0.1', client_port) }
+  let(:server) do
+    FakeFtp::Server.new(client_port, data_port, debug: ENV['DEBUG'] == '1')
   end
+  let(:data_server) { TCPServer.new('127.0.0.1', data_server_port) }
 
   before { server.start }
 
@@ -60,7 +58,8 @@ describe FakeFtp::Server, 'commands' do
       expect(server.mode).to eql(:active)
       SpecHelper.gets_with_timeout(client)
       client.puts 'PASV'
-      expect(SpecHelper.gets_with_timeout(client)).to eql("227 Entering Passive Mode (127,0,0,1,82,221)\r\n")
+      expect(SpecHelper.gets_with_timeout(client))
+        .to eql("227 Entering Passive Mode (#{data_addr_bits})\r\n")
       expect(server.mode).to eql(:passive)
     end
 
@@ -70,7 +69,9 @@ describe FakeFtp::Server, 'commands' do
       server.start
       SpecHelper.gets_with_timeout(client)
       client.puts 'PASV'
-      expect(SpecHelper.gets_with_timeout(client)).to eql("227 Entering Passive Mode (127,0,0,1,82,119)\r\n")
+      addr_bits = SpecHelper.local_addr_bits(21_111)
+      expect(SpecHelper.gets_with_timeout(client))
+        .to eql("227 Entering Passive Mode (#{addr_bits})\r\n")
     end
 
     it 'does not accept PASV if no port set' do
@@ -98,7 +99,7 @@ describe FakeFtp::Server, 'commands' do
     end
 
     it 'accepts PORT and connects to port' do
-      client.puts "PORT #{active_addr}"
+      client.puts "PORT #{data_server_addr_bits}"
       expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
       @data_connection.join
     end
@@ -109,7 +110,7 @@ describe FakeFtp::Server, 'commands' do
       SpecHelper.gets_with_timeout(client)
       expect(server.mode).to eql(:passive)
 
-      client.puts "PORT #{active_addr}"
+      client.puts "PORT #{data_server_addr_bits}"
       expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
 
       @data_connection.join
@@ -191,11 +192,12 @@ describe FakeFtp::Server, 'commands' do
     end
 
     context 'passive' do
-      let(:data_client) { TCPSocket.open('127.0.0.1', 21_213) }
+      let(:data_client) { TCPSocket.open('127.0.0.1', data_port) }
 
       before :each do
         client.puts 'PASV'
-        expect(SpecHelper.gets_with_timeout(client)).to eql("227 Entering Passive Mode (127,0,0,1,82,221)\r\n")
+        expect(SpecHelper.gets_with_timeout(client))
+          .to eql("227 Entering Passive Mode (#{data_addr_bits})\r\n")
       end
 
       it 'accepts STOR with filename' do
@@ -402,7 +404,7 @@ describe FakeFtp::Server, 'commands' do
       end
 
       it 'accepts STOR with filename' do
-        client.puts "PORT #{active_addr}"
+        client.puts "PORT #{data_server_addr_bits}"
         expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
 
         client.puts 'STOR some_other_file'
@@ -418,7 +420,7 @@ describe FakeFtp::Server, 'commands' do
       end
 
       it 'accepts RETR with a filename' do
-        client.puts "PORT #{active_addr}"
+        client.puts "PORT #{data_server_addr_bits}"
         expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
 
         server.add_file('some_file', '1234567890')
@@ -473,7 +475,7 @@ describe FakeFtp::Server, 'commands' do
       end
 
       it 'accepts an NLST command' do
-        client.puts "PORT #{active_addr}"
+        client.puts "PORT #{data_server_addr_bits}"
         expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
 
         server.add_file('some_file', '1234567890')
