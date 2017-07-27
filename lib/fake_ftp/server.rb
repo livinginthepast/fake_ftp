@@ -115,13 +115,15 @@ module FakeFtp
 
     private
 
+    attr_reader :options
+
     def respond_with(stuff)
       @client.print stuff << LNBK unless stuff.nil? || @client.nil? || @client.closed?
     end
 
     def parse(request)
       return if request.nil?
-      puts request if @options[:debug]
+      puts request if options[:debug]
       command = request[0, 4].downcase.strip
       contents = request.split
       message = contents[1..contents.length]
