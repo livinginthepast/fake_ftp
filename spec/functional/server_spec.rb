@@ -73,7 +73,7 @@ describe FakeFtp::Server, 'commands' do
   end
 
   context 'active' do
-    let!(:data_server) { ::TCPServer.new('127.0.0.1', 21_216) }
+    let(:data_server) { TCPServer.new('127.0.0.1', 21_216) }
 
     before :each do
       client.gets
@@ -351,7 +351,7 @@ describe FakeFtp::Server, 'commands' do
     end
 
     context 'active' do
-      let!(:data_server) { ::TCPServer.new('127.0.0.1', 21_216) }
+      let(:data_server) { TCPServer.new('127.0.0.1', 21_216) }
 
       before :each do
         @data_connection = Thread.new do
