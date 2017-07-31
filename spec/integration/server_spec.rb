@@ -85,12 +85,5 @@ describe FakeFtp::Server, 'with ftp client', integration: true do
       expect { client.delete(text_filename) }.to_not raise_error
       expect(server.files).to_not include('/pub/text_file.txt')
     end
-
-    xit 'should disconnect clients on close' do
-      # TODO: when this succeeds, we can care less about manually closing clients
-      #       otherwise we get a CLOSE_WAIT process hanging around that blocks our port
-      server.stop
-      expect(client.closed?).to be true
-    end
   end
 end

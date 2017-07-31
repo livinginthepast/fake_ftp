@@ -8,4 +8,5 @@ group :test do
   gem 'rake', '~> 12.0.0'
   gem 'rspec', '~> 3.6.0'
   gem 'rubocop', '~> 0.49.1'
+  gem 'simplecov', '~> 0.14.1', require: false
 end

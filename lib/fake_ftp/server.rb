@@ -30,15 +30,13 @@ module FakeFtp
       user
       site
     ].freeze
-    LNBK = "\r\n".freeze
+    CRLF = "\r\n".freeze
 
     alias path workdir
 
     def initialize(control_port = 21, data_port = nil, options = {})
       @port = control_port
       @passive_port = data_port
-      raise(Errno::EADDRINUSE, port.to_s) if !control_port.zero? && is_running?
-      raise(Errno::EADDRINUSE, passive_port.to_s) if passive_port && !passive_port.zero? && is_running?(passive_port)
       @store = {}
       @workdir = '/pub'
       @options = options
@@ -49,15 +47,14 @@ module FakeFtp
       @server = nil
       @client = nil
 
-      options[:mode] = :active unless options.key?(:mode)
-      unless %i[active passive].include?(options[:mode])
-        raise StandardError, "invalid mode #{options[:mode]}"
+      raise Errno::EADDRINUSE, port.to_s if !control_port.zero? && running?
+
+      if passive_port && !passive_port.zero? && running?(passive_port)
+        raise Errno::EADDRINUSE, passive_port.to_s
       end
 
-      options[:absolute] = false unless options.key?(:absolute)
-      unless [true, false].include?(options[:absolute])
-        raise StandardError, "invalid absolute #{options[:absolute]}"
-      end
+      self.mode = :active unless options.key?(:mode)
+      self.absolute = false unless options.key?(:absolute)
     end
 
     def files
@@ -99,7 +96,8 @@ module FakeFtp
           debug('enter client loop')
           @client = begin
                       @server.accept
-                    rescue
+                    rescue => e
+                      debug("error on accept: #{e}")
                       nil
                     end
           next unless @client
@@ -108,10 +106,11 @@ module FakeFtp
             debug('enter request thread')
             while @started && !socket.nil? && !socket.closed?
               input = begin
-                          socket.gets
-                        rescue
-                          nil
-                        end
+                        socket.gets
+                      rescue
+                        debug("error on socket.gets: #{e}")
+                        nil
+                      end
               if input
                 debug("server client raw: <- #{input.inspect}")
                 respond_with(parse(input))
@@ -131,10 +130,9 @@ module FakeFtp
         end
       end
 
-      if passive_port
-        @data_server = ::TCPServer.new('127.0.0.1', passive_port)
-        @passive_port = @data_server.addr[1]
-      end
+      return unless passive_port
+      @data_server = ::TCPServer.new('127.0.0.1', passive_port)
+      @passive_port = @data_server.addr[1]
     end
 
     def stop
@@ -146,19 +144,32 @@ module FakeFtp
       @data_server = nil
     end
 
-    def is_running?(tcp_port = nil)
+    def running?(tcp_port = nil)
       tcp_port.nil? ? port_is_open?(port) : port_is_open?(tcp_port)
     end
 
+    alias is_running? running?
+
     def mode=(value)
-      unless [true, false].include?(value)
-        raise ValueError, "invalid mode #{value}"
+      unless %i[active passive].include?(value)
+        raise ArgumentError, "invalid mode #{value.inspect}"
       end
       options[:mode] = value
     end
 
     def mode
       options[:mode]
+    end
+
+    def absolute?
+      options[:absolute]
+    end
+
+    def absolute=(value)
+      unless [true, false].include?(value)
+        raise ArgumentError, "invalid absolute #{value}"
+      end
+      options[:absolute] = value
     end
 
     private
@@ -171,10 +182,9 @@ module FakeFtp
     end
 
     def respond_with(stuff)
-      unless stuff.nil? || @client.nil? || @client.closed?
-        debug("server client raw: -> #{stuff.inspect}")
-        @client.print(stuff << LNBK)
-      end
+      return if stuff.nil? || @client.nil? || @client.closed?
+      debug("server client raw: -> #{stuff.inspect}")
+      @client.print(stuff << CRLF)
     end
 
     def parse(request)
@@ -194,8 +204,8 @@ module FakeFtp
 
     ## FTP commands
     #
-    #  Methods are prefixed with an underscore to avoid conflicts with internal server
-    #  methods. Methods map 1:1 to FTP command words.
+    #  Methods are prefixed with an underscore to avoid conflicts with internal
+    #  server methods. Methods map 1:1 to FTP command words.
     #
     def _acct(*_args)
       '230 WHATEVER!'
@@ -212,16 +222,31 @@ module FakeFtp
     end
 
     def _list(*args)
-      respond_with('425 Ain\'t no data port!') && return if active? && @command_state[:active_connection].nil?
+      if active? && @command_state[:active_connection].nil?
+        respond_with('425 Ain\'t no data port!')
+        return
+      end
 
       respond_with('150 Listing status ok, about to open data connection')
-      data_client = active? ? @command_state[:active_connection] : @data_server.accept
+      data_client = if active?
+                      @command_state[:active_connection]
+                    else
+                      @data_server.accept
+                    end
 
       wildcards = build_wildcards(args)
-      matching = matching_files(wildcards).map do |f|
-        "-rw-r--r--\t1\towner\tgroup\t#{f.bytes}\t#{f.created.strftime('%b %d %H:%M')}\t#{f.name}\n"
+      statlines = matching_files(wildcards).map do |f|
+        %W[
+          -rw-r--r--
+          1
+          owner
+          group
+          #{f.bytes}
+          #{f.created.strftime('%b %d %H:%M')}
+          #{f.name}
+        ].join("\t")
       end
-      data_client.write(matching.join)
+      data_client.write(statlines.join("\n"))
       data_client.close
       @command_state[:active_connection] = nil
 
@@ -233,14 +258,23 @@ module FakeFtp
       server_file = file(filename)
       respond_with('550 File not found') && return if server_file.nil?
 
-      respond_with("213 #{server_file.last_modified_time.strftime('%Y%m%d%H%M%S')}")
+      respond_with(
+        "213 #{server_file.last_modified_time.strftime('%Y%m%d%H%M%S')}"
+      )
     end
 
     def _nlst(*args)
-      respond_with('425 Ain\'t no data port!') && return if active? && @command_state[:active_connection].nil?
+      if active? && @command_state[:active_connection].nil?
+        respond_with('425 Ain\'t no data port!')
+        return
+      end
 
       respond_with('150 Listing status ok, about to open data connection')
-      data_client = active? ? @command_state[:active_connection] : @data_server.accept
+      data_client = if active?
+                      @command_state[:active_connection]
+                    else
+                      @data_server.accept
+                    end
 
       wildcards = build_wildcards(args)
       matching = matching_files(wildcards).map do |f|
@@ -278,7 +312,9 @@ module FakeFtp
       end
       options[:mode] = :active
       debug('_port active connection ->')
-      @command_state[:active_connection] = ::TCPSocket.new('127.0.0.1', remote_port)
+      @command_state[:active_connection] = ::TCPSocket.new(
+        '127.0.0.1', remote_port
+      )
       debug('_port active connection <-')
       '200 Okay'
     end
@@ -299,10 +335,17 @@ module FakeFtp
       f = file(filename.to_s)
       return respond_with('550 File not found') if f.nil?
 
-      respond_with('425 Ain\'t no data port!') && return if active? && @command_state[:active_connection].nil?
+      if active? && @command_state[:active_connection].nil?
+        respond_with('425 Ain\'t no data port!')
+        return
+      end
 
       respond_with('150 File status ok, about to open data connection')
-      data_client = active? ? @command_state[:active_connection] : @data_server.accept
+      data_client = if active?
+                      @command_state[:active_connection]
+                    else
+                      @data_server.accept
+                    end
 
       data_client.write(f.data)
 
@@ -342,10 +385,17 @@ module FakeFtp
     end
 
     def _stor(filename = '')
-      respond_with('425 Ain\'t no data port!') && return if active? && @command_state[:active_connection].nil?
+      if active? && @command_state[:active_connection].nil?
+        respond_with('425 Ain\'t no data port!')
+        return
+      end
 
       respond_with('125 Do it!')
-      data_client = active? ? @command_state[:active_connection] : @data_server.accept
+      data_client = if active?
+                      @command_state[:active_connection]
+                    else
+                      @data_server.accept
+                    end
 
       data = data_client.read(nil)
       @store[abspath(filename)] = FakeFtp::File.new(
@@ -366,7 +416,7 @@ module FakeFtp
         end
       end
 
-      return '550 Delete operation failed.' if files_to_delete.count == 0
+      return '550 Delete operation failed.' if files_to_delete.empty?
 
       @store.reject! do |_, f|
         files_to_delete.include?(f)
@@ -402,10 +452,6 @@ module FakeFtp
       options[:mode] == :active
     end
 
-    def absolute?
-      options[:absolute]
-    end
-
     def port_is_open?(port)
       begin
         Timeout.timeout(1) do
@@ -416,7 +462,8 @@ module FakeFtp
             return false
           end
         end
-      rescue Timeout::Error
+      rescue Timeout::Error => e
+        debug("timeout while checking port #{port}: #{e}")
       end
 
       false

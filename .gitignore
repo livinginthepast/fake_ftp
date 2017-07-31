@@ -6,3 +6,4 @@ pkg/*
 .rbenv-version
 .rbenv-gemsets
 /Gemfile.lock
+/coverage/
