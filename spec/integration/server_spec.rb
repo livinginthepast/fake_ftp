@@ -1,10 +1,9 @@
-require 'spec_helper'
 require 'net/ftp'
 
-describe FakeFtp::Server, 'with ftp client' do
-  let(:server) { FakeFtp::Server.new(21212, 21213) }
-  let(:client) { Net::FTP.new }
-  let(:text_filename) { File.expand_path("../fixtures/text_file.txt", File.dirname(__FILE__)) }
+describe FakeFtp::Server, 'with ftp client', integration: true do
+  let(:server) { FakeFtp::Server.new(21_212, 21_213) }
+  let(:client) { Net::FTP.new(nil, debug_mode: ENV['DEBUG'] == '1') }
+  let(:text_filename) { File.expand_path('../fixtures/text_file.txt', File.dirname(__FILE__)) }
 
   before { server.start }
 
@@ -14,29 +13,29 @@ describe FakeFtp::Server, 'with ftp client' do
   end
 
   it 'should accept connections' do
-    expect { client.connect('127.0.0.1', 21212) }.to_not raise_error
+    expect { client.connect('127.0.0.1', 21_212) }.to_not raise_error
   end
 
-  context "with client" do
-    before { client.connect("127.0.0.1", 21212) }
+  context 'with client' do
+    before { client.connect('127.0.0.1', 21_212) }
 
-    it "should allow anonymous authentication" do
+    it 'should allow anonymous authentication' do
       expect { client.login }.to_not raise_error
     end
 
-    it "should allow named authentication" do
+    it 'should allow named authentication' do
       expect { client.login('someone', 'password') }.to_not raise_error
     end
 
-    it "should allow client to quit" do
+    it 'should allow client to quit' do
       expect { client.login('someone', 'password') }.to_not raise_error
       expect { client.quit }.to_not raise_error
     end
 
-    it "should allow mtime" do
+    it 'should allow mtime' do
       filename = 'someone'
       time = Time.now
-      server.add_file(filename, "some data", time)
+      server.add_file(filename, 'some data', time)
 
       client.passive = false
       mtime = client.mtime(filename)
@@ -47,7 +46,7 @@ describe FakeFtp::Server, 'with ftp client' do
       expect(mtime.to_s).to eql(time.to_s)
     end
 
-    it "should put files using PASV" do
+    it 'should put files using PASV' do
       expect(File.stat(text_filename).size).to eql(20)
 
       client.passive = true
@@ -59,7 +58,7 @@ describe FakeFtp::Server, 'with ftp client' do
       expect(server.file('text_file.txt')).to_not be_active
     end
 
-    it "should put files using active" do
+    it 'should put files using active' do
       expect(File.stat(text_filename).size).to eql(20)
 
       client.passive = false
@@ -71,7 +70,7 @@ describe FakeFtp::Server, 'with ftp client' do
       expect(server.file('text_file.txt')).to be_active
     end
 
-    it "should allow client to execute SITE command" do
+    it 'should allow client to execute SITE command' do
       expect { client.site('umask') }.to_not raise_error
     end
 
@@ -85,11 +84,11 @@ describe FakeFtp::Server, 'with ftp client' do
       expect(server.files).to_not include('text_file.txt')
     end
 
-    xit "should disconnect clients on close" do
+    xit 'should disconnect clients on close' do
       # TODO: when this succeeds, we can care less about manually closing clients
       #       otherwise we get a CLOSE_WAIT process hanging around that blocks our port
       server.stop
-      expect(client.closed?).to be_true
+      expect(client.closed?).to be true
     end
   end
 end

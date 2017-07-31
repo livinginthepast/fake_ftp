@@ -1,12 +1,11 @@
-source "http://rubygems.org"
+source 'http://rubygems.org'
 
-# Specify your gem's dependencies in fake_ftp.gemspec
 gemspec
 
 group :test do
-  gem "rspec", '~> 2.14.0'
-  gem "rake", '~> 0.9.2.2'
-
-  gem "guard-rspec", '~> 0.6.0'
-  gem 'pry-nav', '~> 0.2.3'
+  gem 'guard-rspec', '~> 4.7.3'
+  gem 'pry-nav', '~> 0.2.4'
+  gem 'rake', '~> 12.0.0'
+  gem 'rspec', '~> 3.6.0'
+  gem 'rubocop', '~> 0.49.1'
 end
