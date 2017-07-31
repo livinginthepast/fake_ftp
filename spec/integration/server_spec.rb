@@ -1,9 +1,11 @@
 require 'net/ftp'
 
 describe FakeFtp::Server, 'with ftp client', integration: true do
-  let(:server) { FakeFtp::Server.new(21_212, 21_213) }
+  let(:server) { FakeFtp::Server.new(21_212, 21_213, absolute: true) }
   let(:client) { Net::FTP.new(nil, debug_mode: ENV['DEBUG'] == '1') }
-  let(:text_filename) { File.expand_path('../fixtures/text_file.txt', File.dirname(__FILE__)) }
+  let(:text_filename) do
+    File.expand_path('../../fixtures/text_file.txt', __FILE__)
+  end
 
   before { server.start }
 
@@ -33,7 +35,7 @@ describe FakeFtp::Server, 'with ftp client', integration: true do
     end
 
     it 'should allow mtime' do
-      filename = 'someone'
+      filename = '/pub/someone'
       time = Time.now
       server.add_file(filename, 'some data', time)
 
@@ -52,10 +54,10 @@ describe FakeFtp::Server, 'with ftp client', integration: true do
       client.passive = true
       expect { client.put(text_filename) }.to_not raise_error
 
-      expect(server.files).to include('text_file.txt')
-      expect(server.file('text_file.txt').bytes).to eql(20)
-      expect(server.file('text_file.txt')).to be_passive
-      expect(server.file('text_file.txt')).to_not be_active
+      expect(server.files).to include('/pub/text_file.txt')
+      expect(server.file('/pub/text_file.txt').bytes).to eql(20)
+      expect(server.file('/pub/text_file.txt')).to be_passive
+      expect(server.file('/pub/text_file.txt')).to_not be_active
     end
 
     it 'should put files using active' do
@@ -64,10 +66,10 @@ describe FakeFtp::Server, 'with ftp client', integration: true do
       client.passive = false
       expect { client.put(text_filename) }.to_not raise_error
 
-      expect(server.files).to include('text_file.txt')
-      expect(server.file('text_file.txt').bytes).to eql(20)
-      expect(server.file('text_file.txt')).to_not be_passive
-      expect(server.file('text_file.txt')).to be_active
+      expect(server.files).to include('/pub/text_file.txt')
+      expect(server.file('/pub/text_file.txt').bytes).to eql(20)
+      expect(server.file('/pub/text_file.txt')).to_not be_passive
+      expect(server.file('/pub/text_file.txt')).to be_active
     end
 
     it 'should allow client to execute SITE command' do
@@ -79,9 +81,9 @@ describe FakeFtp::Server, 'with ftp client', integration: true do
 
       client.passive = false
       expect { client.put(text_filename) }.to_not raise_error
-      expect(server.files).to include('text_file.txt')
+      expect(server.files).to include('/pub/text_file.txt')
       expect { client.delete(text_filename) }.to_not raise_error
-      expect(server.files).to_not include('text_file.txt')
+      expect(server.files).to_not include('/pub/text_file.txt')
     end
 
     xit 'should disconnect clients on close' do
