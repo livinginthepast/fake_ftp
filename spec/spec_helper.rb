@@ -1,5 +1,6 @@
 $LOAD_PATH.unshift(File.expand_path('../lib', __FILE__))
 
+require 'simplecov'
 require 'rspec'
 require 'fake_ftp'
 
@@ -49,7 +50,7 @@ module SpecHelper
       10
       #{ftp_file.created.strftime('%b %d %H:%M')}
       #{ftp_file.name}
-    ].join("\t") + "\n"
+    ].join("\t")
   end
 
   module_function :statline

@@ -3,9 +3,22 @@ inherit_from: .rubocop_todo.yml
 Style/Documentation:
   Enabled: false
 
+Metrics/AbcSize:
+  Max: 40
+
+Metrics/CyclomaticComplexity:
+  Max: 15
+
+Metrics/MethodLength:
+  Max: 45
+
+Metrics/PerceivedComplexity:
+  Max: 15
+
 Metrics/BlockLength:
   Exclude:
   - 'spec/**/*'
+  Max: 40
 
 Metrics/ClassLength:
-  Max: 400
+  Max: 500

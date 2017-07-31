@@ -1,10 +1,33 @@
 language: ruby
 sudo: false
 dist: trusty
-cache: bundler
+cache:
+  bundler: true
+  directories:
+  - ~/.local/bin
 rvm:
 - 2.4.1
 - 2.3.4
 env:
-- FUNCTIONAL_SPECS=0 INTEGRATION_SPECS=0
-- FUNCTIONAL_SPECS=1 INTEGRATION_SPECS=1
+  matrix:
+  - COVERAGE=0 FUNCTIONAL_SPECS=0 INTEGRATION_SPECS=0
+  - COVERAGE=1 FUNCTIONAL_SPECS=1 INTEGRATION_SPECS=1
+  global:
+  - PATH="$HOME/.local/bin:$PATH"
+before_install:
+- if ! cc-test-reporter --version; then
+    mkdir -p ~/.local/bin;
+    curl -sSL
+         -o ~/.local/bin/cc-test-reporter
+         https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64;
+    chmod +x ~/.local/bin/cc-test-reporter;
+  fi
+- cc-test-reporter before-build
+after_script:
+- if [[ "${TRAVIS_PULL_REQUEST}" == "false" &&
+        "${COVERAGE}" == "1" &&
+        "${FUNCTIONAL_SPECS}" == "1" &&
+        "${INTEGRATION_SPECS}" == "1" &&
+        "${TRAVIS_RUBY_VERSION}" == "2.4.1" ]]; then
+    cc-test-reporter after-build --exit-code "${TRAVIS_TEST_RESULT}";
+  fi

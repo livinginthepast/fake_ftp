@@ -23,7 +23,7 @@ describe FakeFtp::File do
     it 'has a data attribute' do
       @file.data = 'some data'
       expect(@file.data).to eql('some data')
-      expect(@file.bytes).to eql('some data'.length)
+      expect(@file.bytes).to eql(9)
     end
   end
 
@@ -56,7 +56,8 @@ describe FakeFtp::File do
       expect(file.instance_variable_get(:@type)).to eql(:passive)
     end
 
-    it 'can be initialized with name and bytes and type and last_modified_time' do
+    it 'can be initialized with name and bytes and type ' \
+       'and last_modified_time' do
       time = Time.now
       file = FakeFtp::File.new('filename', 104, :passive, time)
       expect(file.name).to eql('filename')

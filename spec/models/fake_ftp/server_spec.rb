@@ -16,11 +16,11 @@ describe FakeFtp::Server, 'setup' do
 
   it 'should start and stop' do
     server = FakeFtp::Server.new(21_212)
-    expect(server.is_running?).to be false
+    expect(server.running?).to be false
     server.start
-    expect(server.is_running?).to be true
+    expect(server.running?).to be true
     server.stop
-    expect(server.is_running?).to be false
+    expect(server.running?).to be false
   end
 
   it 'should default :mode to :active' do
@@ -30,24 +30,26 @@ describe FakeFtp::Server, 'setup' do
 
   it 'should start and stop passive port' do
     server = FakeFtp::Server.new(21_212, 21_213)
-    expect(server.is_running?(21_213)).to be false
+    expect(server.running?(21_213)).to be false
     server.start
-    expect(server.is_running?(21_213)).to be true
+    expect(server.running?(21_213)).to be true
     server.stop
-    expect(server.is_running?(21_213)).to be false
+    expect(server.running?(21_213)).to be false
   end
 
   it 'should raise if attempting to use a bound port' do
     server = FakeFtp::Server.new(21_212)
     server.start
-    expect { FakeFtp::Server.new(21_212) }.to raise_error(Errno::EADDRINUSE, 'Address already in use - 21212')
+    expect { FakeFtp::Server.new(21_212) }
+      .to raise_error(Errno::EADDRINUSE, 'Address already in use - 21212')
     server.stop
   end
 
   it 'should raise if attempting to use a bound passive_port' do
     server = FakeFtp::Server.new(21_212, 21_213)
     server.start
-    expect { FakeFtp::Server.new(21_214, 21_213) }.to raise_error(Errno::EADDRINUSE, 'Address already in use - 21213')
+    expect { FakeFtp::Server.new(21_214, 21_213) }
+      .to raise_error(Errno::EADDRINUSE, 'Address already in use - 21213')
     server.stop
   end
 end
