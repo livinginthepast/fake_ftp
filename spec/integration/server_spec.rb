@@ -1,8 +1,8 @@
 require 'net/ftp'
 
-describe FakeFtp::Server, 'with ftp client' do
+describe FakeFtp::Server, 'with ftp client', integration: true do
   let(:server) { FakeFtp::Server.new(21_212, 21_213) }
-  let(:client) { Net::FTP.new }
+  let(:client) { Net::FTP.new(nil, debug_mode: ENV['DEBUG'] == '1') }
   let(:text_filename) { File.expand_path('../fixtures/text_file.txt', File.dirname(__FILE__)) }
 
   before { server.start }
