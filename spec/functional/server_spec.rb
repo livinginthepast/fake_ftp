@@ -4,7 +4,6 @@ describe FakeFtp::Server, 'commands', functional: true do
   let(:client_port) { rand(19_000..22_000) }
   let(:client_addr_bits) { SpecHelper.local_addr_bits(client_port) }
   let(:data_server_port) { rand(22_000..24_000) }
-  let(:data_server_addr_bits) { SpecHelper.local_addr_bits(data_server_port) }
   let(:client) do
     TCPSocket.open('127.0.0.1', client_port).tap { |s| s.sync = true }
   end
@@ -12,7 +11,7 @@ describe FakeFtp::Server, 'commands', functional: true do
     FakeFtp::Server.new(client_port, data_port, debug: ENV['DEBUG'] == '1')
   end
   let(:data_server) do
-    TCPServer.new('127.0.0.1', data_server_port).tap { |s| s.sync = true }
+    SpecHelper::FakeDataServer.new(data_server_port)
   end
 
   before { server.start }
@@ -30,31 +29,31 @@ describe FakeFtp::Server, 'commands', functional: true do
 
     it 'should get unknown command response when nothing is sent' do
       SpecHelper.gets_with_timeout(client)
-      client.puts
+      client.write("\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("500 Unknown command\r\n")
     end
 
     it 'accepts QUIT' do
       SpecHelper.gets_with_timeout(client)
-      client.puts 'QUIT'
+      client.write("QUIT\r\n")
       expect(SpecHelper.gets_with_timeout(client)).to eql("221 OMG bye!\r\n")
     end
 
     it 'should accept multiple commands in one session' do
       SpecHelper.gets_with_timeout(client)
-      client.puts 'USER thing'
+      client.write("USER thing\r\n")
       SpecHelper.gets_with_timeout(client)
-      client.puts 'PASS thing'
+      client.write("PASS thing\r\n")
       SpecHelper.gets_with_timeout(client)
-      client.puts 'ACCT thing'
+      client.write("ACCT thing\r\n")
       SpecHelper.gets_with_timeout(client)
-      client.puts 'USER thing'
+      client.write("USER thing\r\n")
     end
 
     it 'should accept SITE command' do
       SpecHelper.gets_with_timeout(client)
-      client.puts 'SITE umask'
+      client.write("SITE umask\r\n")
       expect(SpecHelper.gets_with_timeout(client)).to eql "200 umask\r\n"
     end
   end
@@ -63,7 +62,7 @@ describe FakeFtp::Server, 'commands', functional: true do
     it 'accepts PASV' do
       expect(server.mode).to eql(:active)
       SpecHelper.gets_with_timeout(client)
-      client.puts 'PASV'
+      client.write("PASV\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("227 Entering Passive Mode (#{data_addr_bits})\r\n")
       expect(server.mode).to eql(:passive)
@@ -74,7 +73,7 @@ describe FakeFtp::Server, 'commands', functional: true do
       server.passive_port = 21_111
       server.start
       SpecHelper.gets_with_timeout(client)
-      client.puts 'PASV'
+      client.write("PASV\r\n")
       addr_bits = SpecHelper.local_addr_bits(21_111)
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("227 Entering Passive Mode (#{addr_bits})\r\n")
@@ -85,7 +84,7 @@ describe FakeFtp::Server, 'commands', functional: true do
       server.passive_port = nil
       server.start
       SpecHelper.gets_with_timeout(client)
-      client.puts 'PASV'
+      client.write("PASV\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("502 Aww hell no, use Active\r\n")
     end
@@ -94,33 +93,26 @@ describe FakeFtp::Server, 'commands', functional: true do
   context 'active' do
     before :each do
       SpecHelper.gets_with_timeout(client)
-
-      @data_connection = Thread.new do
-        @server_client = data_server.accept
-        expect(@server_client).to_not be_nil
-      end
+      data_server.start
     end
 
     after :each do
-      data_server.close
+      data_server.stop
     end
 
     it 'accepts PORT and connects to port' do
-      client.puts "PORT #{data_server_addr_bits}"
+      client.write("PORT #{data_server.addr_bits}\r\n")
       expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
-      @data_connection.join
     end
 
     it 'should switch to :active on port command' do
       expect(server.mode).to eql(:active)
-      client.puts 'PASV'
+      client.write("PASV\r\n")
       SpecHelper.gets_with_timeout(client)
       expect(server.mode).to eql(:passive)
 
-      client.puts "PORT #{data_server_addr_bits}"
+      client.write("PORT #{data_server.addr_bits}\r\n")
       expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
-
-      @data_connection.join
 
       expect(server.mode).to eql(:active)
     end
@@ -132,23 +124,23 @@ describe FakeFtp::Server, 'commands', functional: true do
     end
 
     it 'accepts USER' do
-      client.puts 'USER some_dude'
+      client.write("USER some_dude\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("331 send your password\r\n")
     end
 
     it 'accepts anonymous USER' do
-      client.puts 'USER anonymous'
+      client.write("USER anonymous\r\n")
       expect(SpecHelper.gets_with_timeout(client)).to eql("230 logged in\r\n")
     end
 
     it 'accepts PASS' do
-      client.puts 'PASS password'
+      client.write("PASS password\r\n")
       expect(SpecHelper.gets_with_timeout(client)).to eql("230 logged in\r\n")
     end
 
     it 'accepts ACCT' do
-      client.puts 'ACCT'
+      client.write("ACCT\r\n")
       expect(SpecHelper.gets_with_timeout(client)).to eql("230 WHATEVER!\r\n")
     end
   end
@@ -159,15 +151,15 @@ describe FakeFtp::Server, 'commands', functional: true do
     end
 
     it 'returns directory on PWD' do
-      client.puts 'PWD'
+      client.write("PWD\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("257 \"/pub\" is current directory\r\n")
     end
 
     it 'says OK to any CWD, CDUP, without doing anything' do
-      client.puts 'CWD somewhere/else'
+      client.write("CWD somewhere/else\r\n")
       expect(SpecHelper.gets_with_timeout(client)).to eql("250 OK!\r\n")
-      client.puts 'CDUP'
+      client.write("CDUP\r\n")
       expect(SpecHelper.gets_with_timeout(client)).to eql("250 OK!\r\n")
     end
   end
@@ -178,31 +170,31 @@ describe FakeFtp::Server, 'commands', functional: true do
     end
 
     it 'accepts TYPE ascii' do
-      client.puts 'TYPE A'
+      client.write("TYPE A\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("200 Type set to A.\r\n")
     end
 
     it 'accepts TYPE image' do
-      client.puts 'TYPE I'
+      client.write("TYPE I\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("200 Type set to I.\r\n")
     end
 
     it 'does not accept TYPEs other than ascii or image' do
-      client.puts 'TYPE E'
+      client.write("TYPE E\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("504 We don't allow those\r\n")
-      client.puts 'TYPE N'
+      client.write("TYPE N\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("504 We don't allow those\r\n")
-      client.puts 'TYPE T'
+      client.write("TYPE T\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("504 We don't allow those\r\n")
-      client.puts 'TYPE C'
+      client.write("TYPE C\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("504 We don't allow those\r\n")
-      client.puts 'TYPE L'
+      client.write("TYPE L\r\n")
       expect(SpecHelper.gets_with_timeout(client))
         .to eql("504 We don't allow those\r\n")
     end
@@ -213,15 +205,15 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       before :each do
-        client.puts 'PASV'
+        client.write("PASV\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("227 Entering Passive Mode (#{data_addr_bits})\r\n")
       end
 
       it 'accepts STOR with filename' do
-        client.puts 'STOR some_file'
+        client.write("STOR some_file\r\n")
         expect(SpecHelper.gets_with_timeout(client)).to eql("125 Do it!\r\n")
-        data_client.puts '1234567890'
+        data_client.write('1234567890')
         data_client.close
         expect(SpecHelper.gets_with_timeout(client)).to eql("226 Did it!\r\n")
         expect(server.files).to include('some_file')
@@ -230,10 +222,9 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       it 'accepts STOR with filename and trailing newline' do
-        client.puts 'STOR some_file'
+        client.write("STOR some_file\r\n")
         SpecHelper.gets_with_timeout(client)
-        # puts tries to be smart and only write a single \n
-        data_client.puts "1234567890\n\n"
+        data_client.write("1234567890\n")
         data_client.close
         expect(SpecHelper.gets_with_timeout(client)).to eql("226 Did it!\r\n")
         expect(server.files).to include('some_file')
@@ -242,9 +233,9 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       it 'accepts STOR with filename and long file' do
-        client.puts 'STOR some_file'
+        client.write("STOR some_file\r\n")
         expect(SpecHelper.gets_with_timeout(client)).to eql("125 Do it!\r\n")
-        data_client.puts('1234567890' * 10_000)
+        data_client.write('1234567890' * 10_000)
         data_client.close
         expect(SpecHelper.gets_with_timeout(client)).to eql("226 Did it!\r\n")
         expect(server.files).to include('some_file')
@@ -263,20 +254,20 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       it 'does not accept RETR without a filename' do
-        client.puts 'RETR'
+        client.write("RETR\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("501 No filename given\r\n")
       end
 
       it 'does not serve files that do not exist' do
-        client.puts 'RETR some_file'
+        client.write("RETR some_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("550 File not found\r\n")
       end
 
       it 'accepts RETR with a filename' do
         server.add_file('some_file', '1234567890')
-        client.puts 'RETR some_file'
+        client.write("RETR some_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 File status ok, about to open data connection\r\n")
         data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
@@ -288,7 +279,7 @@ describe FakeFtp::Server, 'commands', functional: true do
 
       it 'accepts DELE with a filename' do
         server.add_file('some_file', '1234567890')
-        client.puts 'DELE some_file'
+        client.write("DELE some_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("250 Delete operation successful.\r\n")
         expect(server.files).to_not include('some_file')
@@ -296,7 +287,7 @@ describe FakeFtp::Server, 'commands', functional: true do
 
       it 'gives error message when trying to delete a file ' \
          'that does not exist' do
-        client.puts 'DELE non_existing_file'
+        client.write("DELE non_existing_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("550 Delete operation failed.\r\n")
       end
@@ -304,7 +295,7 @@ describe FakeFtp::Server, 'commands', functional: true do
       it 'accepts a LIST command' do
         server.add_file('some_file', '1234567890')
         server.add_file('another_file', '1234567890')
-        client.puts 'LIST'
+        client.puts("LIST\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 Listing status ok, about to open data connection\r\n")
         data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
@@ -323,7 +314,7 @@ describe FakeFtp::Server, 'commands', functional: true do
           server.add_file(file, '1234567890')
         end
 
-        client.puts 'LIST *.jpg'
+        client.write("LIST *.jpg\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 Listing status ok, about to open data connection\r\n")
 
@@ -342,7 +333,7 @@ describe FakeFtp::Server, 'commands', functional: true do
           server.add_file(file, '1234567890')
         end
 
-        client.puts 'LIST *.jpg *.gif'
+        client.write("LIST *.jpg *.gif\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 Listing status ok, about to open data connection\r\n")
 
@@ -358,7 +349,7 @@ describe FakeFtp::Server, 'commands', functional: true do
       it 'accepts an NLST command' do
         server.add_file('some_file', '1234567890')
         server.add_file('another_file', '1234567890')
-        client.puts 'NLST'
+        client.write("NLST\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 Listing status ok, about to open data connection\r\n")
         data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
@@ -374,7 +365,7 @@ describe FakeFtp::Server, 'commands', functional: true do
           server.add_file(file, '1234567890')
         end
 
-        client.puts 'NLST *.jpg'
+        client.write("NLST *.jpg\r\n")
 
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 Listing status ok, about to open data connection\r\n")
@@ -390,7 +381,7 @@ describe FakeFtp::Server, 'commands', functional: true do
         filename = 'file.txt'
         now = Time.now
         server.add_file(filename, 'some dummy content', now)
-        client.puts "MDTM #{filename}"
+        client.write("MDTM #{filename}\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("213 #{now.strftime('%Y%m%d%H%M%S')}\r\n")
       end
@@ -398,61 +389,57 @@ describe FakeFtp::Server, 'commands', functional: true do
 
     context 'active' do
       before :each do
-        @data_connection = Thread.new do
-          @server_client = data_server.accept
-        end
+        data_server.start
       end
 
       after :each do
-        data_server.close
-        @data_connection = nil
+        data_server.stop
       end
 
       it 'creates a directory on MKD' do
-        client.puts 'MKD some_dir'
+        client.write("MKD some_dir\r\n")
         expect(SpecHelper.gets_with_timeout(client)).to eql("257 OK!\r\n")
       end
 
       it 'should save the directory after you CWD' do
-        client.puts 'CWD /somewhere/else'
+        client.write("CWD /somewhere/else\r\n")
         expect(SpecHelper.gets_with_timeout(client)).to eql("250 OK!\r\n")
-        client.puts 'PWD'
+        client.write("PWD\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("257 \"/somewhere/else\" is current directory\r\n")
       end
 
       it 'CWD should add a / to the beginning of the directory' do
-        client.puts 'CWD somewhere/else'
+        client.write("CWD somewhere/else\r\n")
         expect(SpecHelper.gets_with_timeout(client)).to eql("250 OK!\r\n")
-        client.puts 'PWD'
+        client.write("PWD\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("257 \"/somewhere/else\" is current directory\r\n")
       end
 
       it 'should not change the directory on CDUP' do
-        client.puts 'CDUP'
+        client.write("CDUP\r\n")
         expect(SpecHelper.gets_with_timeout(client)).to eql("250 OK!\r\n")
-        client.puts 'PWD'
+        client.write("PWD\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("257 \"/pub\" is current directory\r\n")
       end
 
       it 'sends error message if no PORT received' do
-        client.puts 'STOR some_file'
+        client.write("STOR some_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("425 Ain't no data port!\r\n")
       end
 
       it 'accepts STOR with filename' do
-        client.puts "PORT #{data_server_addr_bits}"
+        client.write("PORT #{data_server.addr_bits}\r\n")
         expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
 
-        client.puts 'STOR some_other_file'
+        client.write("STOR some_other_file\r\n")
         expect(SpecHelper.gets_with_timeout(client)).to eql("125 Do it!\r\n")
 
-        @data_connection.join
-        @server_client.print '12345'
-        @server_client.close
+        data_server.handler_sock.print('12345')
+        data_server.handler_sock.close
 
         expect(SpecHelper.gets_with_timeout(client)).to eql("226 Did it!\r\n")
         expect(server.files).to include('some_other_file')
@@ -460,17 +447,19 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       it 'accepts RETR with a filename' do
-        client.puts "PORT #{data_server_addr_bits}"
+        client.write("PORT #{data_server.addr_bits}\r\n")
+        data_server.handler_sock
         expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
 
         server.add_file('some_file', '1234567890')
-        client.puts 'RETR some_file'
+        client.write("RETR some_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 File status ok, about to open data connection\r\n")
 
-        @data_connection.join
-        data = SpecHelper.gets_with_timeout(@server_client, endwith: "\0")
-        @server_client.close
+        data = SpecHelper.gets_with_timeout(
+          data_server.handler_sock, endwith: "\0"
+        )
+        data_server.handler_sock.close
 
         expect(data).to eql('1234567890')
         expect(SpecHelper.gets_with_timeout(client))
@@ -478,33 +467,33 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       it 'accepts RNFR without filename' do
-        client.puts 'RNFR'
+        client.write("RNFR\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("501 Send path name.\r\n")
       end
 
       it 'accepts RNTO without RNFR' do
-        client.puts 'RNTO some_other_file'
+        client.write("RNTO some_other_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("503 Send RNFR first.\r\n")
       end
 
       it 'accepts RNTO and RNFR without filename' do
-        client.puts 'RNFR from_file'
+        client.write("RNFR from_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("350 Send RNTO to complete rename.\r\n")
 
-        client.puts 'RNTO'
+        client.write("RNTO\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("501 Send path name.\r\n")
       end
 
       it 'accepts RNTO and RNFR for not existing file' do
-        client.puts 'RNFR from_file'
+        client.write("RNFR from_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("350 Send RNTO to complete rename.\r\n")
 
-        client.puts 'RNTO to_file'
+        client.write("RNTO to_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("550 File not found.\r\n")
       end
@@ -512,11 +501,11 @@ describe FakeFtp::Server, 'commands', functional: true do
       it 'accepts RNTO and RNFR' do
         server.add_file('from_file', '1234567890')
 
-        client.puts 'RNFR from_file'
+        client.write("RNFR from_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("350 Send RNTO to complete rename.\r\n")
 
-        client.puts 'RNTO to_file'
+        client.write("RNTO to_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("250 Path renamed.\r\n")
 
@@ -525,18 +514,20 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       it 'accepts an NLST command' do
-        client.puts "PORT #{data_server_addr_bits}"
+        client.write("PORT #{data_server.addr_bits}\r\n")
+        data_server.handler_sock
         expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
 
         server.add_file('some_file', '1234567890')
         server.add_file('another_file', '1234567890')
-        client.puts 'NLST'
+        client.write("NLST\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 Listing status ok, about to open data connection\r\n")
 
-        @data_connection.join
-        data = SpecHelper.gets_with_timeout(@server_client, endwith: "\0")
-        @server_client.close
+        data = SpecHelper.gets_with_timeout(
+          data_server.handler_sock, endwith: "\0"
+        )
+        data_server.handler_sock.close
 
         expect(data).to eql("some_file\nanother_file\n")
         expect(SpecHelper.gets_with_timeout(client))

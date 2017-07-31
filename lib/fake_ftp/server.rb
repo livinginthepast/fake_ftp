@@ -66,6 +66,7 @@ module FakeFtp
       @port = @server.addr[1]
       @thread = Thread.new do
         while @started
+          debug('enter client loop')
           @client = begin
                       @server.accept
                     rescue
@@ -74,19 +75,25 @@ module FakeFtp
           next unless @client
           respond_with('220 Can has FTP?')
           @connection = Thread.new(@client) do |socket|
+            debug('enter request thread')
             while @started && !socket.nil? && !socket.closed?
               input = begin
                           socket.gets
                         rescue
                           nil
                         end
-              respond_with parse(input) if input
+              if input
+                debug("server client raw: <- #{input.inspect}")
+                respond_with(parse(input))
+              end
             end
             unless @client.nil?
               @client.close unless @client.closed?
               @client = nil
             end
+            debug('leave request thread')
           end
+          debug('leave client loop')
         end
         unless @server.nil?
           @server.close unless @server.closed?
@@ -118,17 +125,21 @@ module FakeFtp
     attr_reader :options
 
     def respond_with(stuff)
-      @client.print stuff << LNBK unless stuff.nil? || @client.nil? || @client.closed?
+      unless stuff.nil? || @client.nil? || @client.closed?
+        debug("server client raw: -> #{stuff.inspect}")
+        @client.print(stuff << LNBK)
+      end
     end
 
     def parse(request)
       return if request.nil?
-      puts request if options[:debug]
+      debug("raw request: #{request.inspect}")
       command = request[0, 4].downcase.strip
       contents = request.split
       message = contents[1..contents.length]
       case command
       when *CMDS
+        debug("sending _#{command} #{message.inspect}")
         __send__ "_#{command}", *message
       else
         '500 Unknown command'
@@ -224,7 +235,9 @@ module FakeFtp
         @active_connection = nil
       end
       @mode = :active
-      @active_connection = ::TCPSocket.open('127.0.0.1', remote_port)
+      debug('_port active connection ->')
+      @active_connection = ::TCPSocket.new('127.0.0.1', remote_port)
+      debug('_port active connection <-')
       '200 Okay'
     end
 
@@ -289,7 +302,7 @@ module FakeFtp
       respond_with('125 Do it!')
       data_client = active? ? @active_connection : @data_server.accept
 
-      data = data_client.read(nil).chomp
+      data = data_client.read(nil)
       file = FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
       @files << file
 
@@ -370,6 +383,11 @@ module FakeFtp
       else
         files
       end
+    end
+
+    def debug(msg)
+      return unless options[:debug]
+      $stderr.puts("DEBUG:fake_ftp:#{msg}")
     end
   end
 end
