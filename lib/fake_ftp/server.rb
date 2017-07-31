@@ -4,11 +4,10 @@ require 'timeout'
 
 module FakeFtp
   class Server
-
     attr_accessor :port, :passive_port
     attr_reader :mode, :path
 
-    CMDS = %w(
+    CMDS = %w[
       acct
       cwd
       cdup
@@ -30,19 +29,19 @@ module FakeFtp
       type
       user
       site
-    )
-    LNBK = "\r\n"
+    ].freeze
+    LNBK = "\r\n".freeze
 
     def initialize(control_port = 21, data_port = nil, options = {})
       self.port = control_port
       self.passive_port = data_port
-      raise(Errno::EADDRINUSE, "#{port}") if !control_port.zero? && is_running?
-      raise(Errno::EADDRINUSE, "#{passive_port}") if passive_port && !passive_port.zero? && is_running?(passive_port)
+      raise(Errno::EADDRINUSE, port.to_s) if !control_port.zero? && is_running?
+      raise(Errno::EADDRINUSE, passive_port.to_s) if passive_port && !passive_port.zero? && is_running?(passive_port)
       @connection = nil
       @options = options
       @files = []
       @mode = :active
-      @path = "/pub"
+      @path = '/pub'
     end
 
     def files
@@ -67,20 +66,34 @@ module FakeFtp
       @port = @server.addr[1]
       @thread = Thread.new do
         while @started
-          @client = @server.accept rescue nil
-          if @client
-            respond_with('220 Can has FTP?')
-            @connection = Thread.new(@client) do |socket|
-              while @started && !socket.nil? && !socket.closed?
-                input = socket.gets rescue nil
-                respond_with parse(input) if input
-              end
-              unless @client.nil?
-                @client.close unless @client.closed?
-                @client = nil
+          debug('enter client loop')
+          @client = begin
+                      @server.accept
+                    rescue
+                      nil
+                    end
+          next unless @client
+          respond_with('220 Can has FTP?')
+          @connection = Thread.new(@client) do |socket|
+            debug('enter request thread')
+            while @started && !socket.nil? && !socket.closed?
+              input = begin
+                          socket.gets
+                        rescue
+                          nil
+                        end
+              if input
+                debug("server client raw: <- #{input.inspect}")
+                respond_with(parse(input))
               end
             end
+            unless @client.nil?
+              @client.close unless @client.closed?
+              @client = nil
+            end
+            debug('leave request thread')
           end
+          debug('leave client loop')
         end
         unless @server.nil?
           @server.close unless @server.closed?
@@ -109,41 +122,46 @@ module FakeFtp
 
     private
 
+    attr_reader :options
+
     def respond_with(stuff)
-      @client.print stuff << LNBK unless stuff.nil? or @client.nil? or @client.closed?
+      unless stuff.nil? || @client.nil? || @client.closed?
+        debug("server client raw: -> #{stuff.inspect}")
+        @client.print(stuff << LNBK)
+      end
     end
 
     def parse(request)
       return if request.nil?
-      puts request if @options[:debug]
+      debug("raw request: #{request.inspect}")
       command = request[0, 4].downcase.strip
       contents = request.split
       message = contents[1..contents.length]
       case command
       when *CMDS
+        debug("sending _#{command} #{message.inspect}")
         __send__ "_#{command}", *message
       else
         '500 Unknown command'
       end
     end
 
-
     ## FTP commands
     #
     #  Methods are prefixed with an underscore to avoid conflicts with internal server
     #  methods. Methods map 1:1 to FTP command words.
     #
-    def _acct(*args)
+    def _acct(*_args)
       '230 WHATEVER!'
     end
 
     def _cwd(*args)
       @path = args[0]
-      @path = "/#{path}" if path[0].chr != "/"
+      @path = "/#{path}" if path[0].chr != '/'
       '250 OK!'
     end
 
-    def _cdup(*args)
+    def _cdup(*_args)
       '250 OK!'
     end
 
@@ -166,12 +184,12 @@ module FakeFtp
       '226 List information transferred'
     end
 
-    def _mdtm(filename = '', local = false)
+    def _mdtm(filename = '', _local = false)
       respond_with('501 No filename given') && return if filename.empty?
       server_file = file(filename)
       respond_with('550 File not found') && return if server_file.nil?
 
-      respond_with("213 #{server_file.last_modified_time.strftime("%Y%m%d%H%M%S")}")
+      respond_with("213 #{server_file.last_modified_time.strftime('%Y%m%d%H%M%S')}")
     end
 
     def _nlst(*args)
@@ -194,11 +212,11 @@ module FakeFtp
       '226 List information transferred'
     end
 
-    def _pass(*args)
+    def _pass(*_args)
       '230 logged in'
     end
 
-    def _pasv(*args)
+    def _pasv(*_args)
       if passive_port
         @mode = :passive
         p1 = (passive_port / 256).to_i
@@ -217,15 +235,17 @@ module FakeFtp
         @active_connection = nil
       end
       @mode = :active
-      @active_connection = ::TCPSocket.open('127.0.0.1', remote_port)
+      debug('_port active connection ->')
+      @active_connection = ::TCPSocket.new('127.0.0.1', remote_port)
+      debug('_port active connection <-')
       '200 Okay'
     end
 
-    def _pwd(*args)
+    def _pwd(*_args)
       "257 \"#{path}\" is current directory"
     end
 
-    def _quit(*args)
+    def _quit(*_args)
       respond_with '221 OMG bye!'
       @client.close if @client
       @client = nil
@@ -249,15 +269,15 @@ module FakeFtp
       '226 File transferred'
     end
 
-    def _rnfr(rename_from='')
-      return '501 Send path name.' if rename_from.nil? || rename_from.size < 1
+    def _rnfr(rename_from = '')
+      return '501 Send path name.' if rename_from.nil? || rename_from.empty?
 
       @rename_from = rename_from
       '350 Send RNTO to complete rename.'
     end
 
-    def _rnto(rename_to='')
-      return '501 Send path name.' if rename_to.nil? || rename_to.size < 1
+    def _rnto(rename_to = '')
+      return '501 Send path name.' if rename_to.nil? || rename_to.empty?
 
       return '503 Send RNFR first.' unless @rename_from
 
@@ -282,7 +302,7 @@ module FakeFtp
       respond_with('125 Do it!')
       data_client = active? ? @active_connection : @data_server.accept
 
-      data = data_client.read(nil).chomp
+      data = data_client.read(nil)
       file = FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
       @files << file
 
@@ -292,10 +312,10 @@ module FakeFtp
     end
 
     def _dele(filename = '')
-      files_to_delete = @files.select{ |file| file.name == filename }
+      files_to_delete = @files.select { |file| file.name == filename }
       return '550 Delete operation failed.' if files_to_delete.count == 0
 
-      @files = @files - files_to_delete
+      @files -= files_to_delete
 
       '250 Delete operation successful.'
     end
@@ -312,11 +332,11 @@ module FakeFtp
     end
 
     def _user(name = '')
-      (name.to_s == 'anonymous') ? '230 logged in' : '331 send your password'
+      name.to_s == 'anonymous' ? '230 logged in' : '331 send your password'
     end
 
-    def _mkd(directory)
-      "257 OK!"
+    def _mkd(_directory)
+      '257 OK!'
     end
 
     def _site(command)
@@ -331,9 +351,9 @@ module FakeFtp
 
     def port_is_open?(port)
       begin
-        Timeout::timeout(1) do
+        Timeout.timeout(1) do
           begin
-            s = TCPSocket.new("127.0.0.1", port)
+            s = TCPSocket.new('127.0.0.1', port)
             s.close
             return true
           rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
@@ -343,7 +363,7 @@ module FakeFtp
       rescue Timeout::Error
       end
 
-      return false
+      false
     end
 
     def build_wildcards(args)
@@ -356,13 +376,18 @@ module FakeFtp
     end
 
     def matching_files(files, wildcards)
-      if not wildcards.empty?
+      if !wildcards.empty?
         files.select do |f|
           wildcards.any? { |wildcard| f.name =~ /#{wildcard}/ }
         end
       else
         files
       end
+    end
+
+    def debug(msg)
+      return unless options[:debug]
+      $stderr.puts("DEBUG:fake_ftp:#{msg}")
     end
   end
 end
