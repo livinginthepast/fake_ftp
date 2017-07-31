@@ -39,11 +39,15 @@ module FakeFtp
       @passive_port = data_port
       raise(Errno::EADDRINUSE, port.to_s) if !control_port.zero? && is_running?
       raise(Errno::EADDRINUSE, passive_port.to_s) if passive_port && !passive_port.zero? && is_running?(passive_port)
-      @connection = nil
       @store = {}
       @workdir = '/pub'
       @options = options
       @command_state = {}
+
+      @connection = nil
+      @data_server = nil
+      @server = nil
+      @client = nil
 
       options[:mode] = :active unless options.key?(:mode)
       unless %i[active passive].include?(options[:mode])
@@ -208,10 +212,10 @@ module FakeFtp
     end
 
     def _list(*args)
-      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
+      respond_with('425 Ain\'t no data port!') && return if active? && @command_state[:active_connection].nil?
 
       respond_with('150 Listing status ok, about to open data connection')
-      data_client = active? ? @active_connection : @data_server.accept
+      data_client = active? ? @command_state[:active_connection] : @data_server.accept
 
       wildcards = build_wildcards(args)
       matching = matching_files(wildcards).map do |f|
@@ -219,7 +223,7 @@ module FakeFtp
       end
       data_client.write(matching.join)
       data_client.close
-      @active_connection = nil
+      @command_state[:active_connection] = nil
 
       '226 List information transferred'
     end
@@ -233,10 +237,10 @@ module FakeFtp
     end
 
     def _nlst(*args)
-      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
+      respond_with('425 Ain\'t no data port!') && return if active? && @command_state[:active_connection].nil?
 
       respond_with('150 Listing status ok, about to open data connection')
-      data_client = active? ? @active_connection : @data_server.accept
+      data_client = active? ? @command_state[:active_connection] : @data_server.accept
 
       wildcards = build_wildcards(args)
       matching = matching_files(wildcards).map do |f|
@@ -245,7 +249,7 @@ module FakeFtp
 
       data_client.write(matching.join)
       data_client.close
-      @active_connection = nil
+      @command_state[:active_connection] = nil
 
       '226 List information transferred'
     end
@@ -268,13 +272,13 @@ module FakeFtp
     def _port(remote = '')
       remote = remote.split(',')
       remote_port = remote[4].to_i * 256 + remote[5].to_i
-      unless @active_connection.nil?
-        @active_connection.close
-        @active_connection = nil
+      unless @command_state[:active_connection].nil?
+        @command_state[:active_connection].close
+        @command_state[:active_connection] = nil
       end
       options[:mode] = :active
       debug('_port active connection ->')
-      @active_connection = ::TCPSocket.new('127.0.0.1', remote_port)
+      @command_state[:active_connection] = ::TCPSocket.new('127.0.0.1', remote_port)
       debug('_port active connection <-')
       '200 Okay'
     end
@@ -292,18 +296,18 @@ module FakeFtp
     def _retr(filename = '')
       respond_with('501 No filename given') if filename.empty?
 
-      file = file(filename.to_s)
-      return respond_with('550 File not found') if file.nil?
+      f = file(filename.to_s)
+      return respond_with('550 File not found') if f.nil?
 
-      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
+      respond_with('425 Ain\'t no data port!') && return if active? && @command_state[:active_connection].nil?
 
       respond_with('150 File status ok, about to open data connection')
-      data_client = active? ? @active_connection : @data_server.accept
+      data_client = active? ? @command_state[:active_connection] : @data_server.accept
 
-      data_client.write(file.data)
+      data_client.write(f.data)
 
       data_client.close
-      @active_connection = nil
+      @command_state[:active_connection] = nil
       '226 File transferred'
     end
 
@@ -338,10 +342,10 @@ module FakeFtp
     end
 
     def _stor(filename = '')
-      respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
+      respond_with('425 Ain\'t no data port!') && return if active? && @command_state[:active_connection].nil?
 
       respond_with('125 Do it!')
-      data_client = active? ? @active_connection : @data_server.accept
+      data_client = active? ? @command_state[:active_connection] : @data_server.accept
 
       data = data_client.read(nil)
       @store[abspath(filename)] = FakeFtp::File.new(
@@ -349,7 +353,7 @@ module FakeFtp
       )
 
       data_client.close
-      @active_connection = nil
+      @command_state[:active_connection] = nil
       '226 Did it!'
     end
 
