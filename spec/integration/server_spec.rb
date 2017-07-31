@@ -52,10 +52,10 @@ describe FakeFtp::Server, 'with ftp client', integration: true do
       client.passive = true
       expect { client.put(text_filename) }.to_not raise_error
 
-      expect(server.files).to include('text_file.txt')
-      expect(server.file('text_file.txt').bytes).to eql(20)
-      expect(server.file('text_file.txt')).to be_passive
-      expect(server.file('text_file.txt')).to_not be_active
+      expect(server.files).to include('/pub/text_file.txt')
+      expect(server.file('/pub/text_file.txt').bytes).to eql(20)
+      expect(server.file('/pub/text_file.txt')).to be_passive
+      expect(server.file('/pub/text_file.txt')).to_not be_active
     end
 
     it 'should put files using active' do
@@ -64,10 +64,10 @@ describe FakeFtp::Server, 'with ftp client', integration: true do
       client.passive = false
       expect { client.put(text_filename) }.to_not raise_error
 
-      expect(server.files).to include('text_file.txt')
-      expect(server.file('text_file.txt').bytes).to eql(20)
-      expect(server.file('text_file.txt')).to_not be_passive
-      expect(server.file('text_file.txt')).to be_active
+      expect(server.files).to include('/pub/text_file.txt')
+      expect(server.file('/pub/text_file.txt').bytes).to eql(20)
+      expect(server.file('/pub/text_file.txt')).to_not be_passive
+      expect(server.file('/pub/text_file.txt')).to be_active
     end
 
     it 'should allow client to execute SITE command' do

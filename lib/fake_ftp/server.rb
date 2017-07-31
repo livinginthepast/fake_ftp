@@ -49,7 +49,7 @@ module FakeFtp
     end
 
     def file(name)
-      @files.detect { |file| file.name == name }
+      @files.detect { |file| file.name == name || [@path, name].join == name }
     end
 
     def reset
@@ -57,7 +57,7 @@ module FakeFtp
     end
 
     def add_file(filename, data, last_modified_time = Time.now)
-      @files << FakeFtp::File.new(::File.basename(filename.to_s), data, @mode, last_modified_time)
+      @files << FakeFtp::File.new(filename.to_s, data, @mode, last_modified_time)
     end
 
     def start
@@ -254,7 +254,7 @@ module FakeFtp
     def _retr(filename = '')
       respond_with('501 No filename given') if filename.empty?
 
-      file = file(::File.basename(filename.to_s))
+      file = file(filename.to_s)
       return respond_with('550 File not found') if file.nil?
 
       respond_with('425 Ain\'t no data port!') && return if active? && @active_connection.nil?
@@ -302,8 +302,7 @@ module FakeFtp
       respond_with('125 Do it!')
       data_client = active? ? @active_connection : @data_server.accept
 
-      data = data_client.read(nil)
-      file = FakeFtp::File.new(::File.basename(filename.to_s), data, @mode)
+      file = FakeFtp::File.new([@path, ::File.basename(filename.to_s)].join('/'), data, @mode)
       @files << file
 
       data_client.close
