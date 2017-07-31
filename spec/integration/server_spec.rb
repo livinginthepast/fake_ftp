@@ -74,6 +74,16 @@ describe FakeFtp::Server, 'with ftp client', integration: true do
       expect { client.site('umask') }.to_not raise_error
     end
 
+    it 'should be able to delete files added using put' do
+      expect(File.stat(text_filename).size).to eql(20)
+
+      client.passive = false
+      expect { client.put(text_filename) }.to_not raise_error
+      expect(server.files).to include('text_file.txt')
+      expect { client.delete(text_filename) }.to_not raise_error
+      expect(server.files).to_not include('text_file.txt')
+    end
+
     xit 'should disconnect clients on close' do
       # TODO: when this succeeds, we can care less about manually closing clients
       #       otherwise we get a CLOSE_WAIT process hanging around that blocks our port
