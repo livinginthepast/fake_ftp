@@ -40,17 +40,19 @@ module SpecHelper
 
   module_function :local_addr_bits
 
-  def wait_for(timeout: 5)
-    outer_caller = caller(0..1).last.to_s
-    start = Time.now
-    if Time.now - start >= timeout
-      raise Timeout::Error, "timeout=#{timeout}s caller=#{outer_caller.inspect}"
-    end
-    return if yield
-    sleep 0.01
+  def statline(ftp_file)
+    %W[
+      -rw-r--r--
+      1
+      owner
+      group
+      10
+      #{ftp_file.created.strftime('%b %d %H:%M')}
+      #{ftp_file.name}
+    ].join("\t") + "\n"
   end
 
-  module_function :wait_for
+  module_function :statline
 
   class FakeDataServer
     def initialize(port)

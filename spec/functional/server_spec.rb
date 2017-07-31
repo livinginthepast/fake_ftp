@@ -8,7 +8,11 @@ describe FakeFtp::Server, 'commands', functional: true do
     TCPSocket.open('127.0.0.1', client_port).tap { |s| s.sync = true }
   end
   let(:server) do
-    FakeFtp::Server.new(client_port, data_port, debug: ENV['DEBUG'] == '1')
+    FakeFtp::Server.new(
+      client_port, data_port,
+      debug: ENV['DEBUG'] == '1',
+      absolute: true
+    )
   end
   let(:data_server) do
     SpecHelper::FakeDataServer.new(data_server_port)
@@ -266,8 +270,8 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       it 'accepts RETR with a filename' do
-        server.add_file('some_file', '1234567890')
-        client.write("RETR some_file\r\n")
+        server.add_file('/pub/some_file', '1234567890')
+        client.write("RETR /pub/some_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 File status ok, about to open data connection\r\n")
         data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
@@ -293,25 +297,25 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       it 'accepts a LIST command' do
-        server.add_file('some_file', '1234567890')
-        server.add_file('another_file', '1234567890')
+        server.add_file('/pub/some_file', '1234567890')
+        server.add_file('/pub/another_file', '1234567890')
         client.puts("LIST\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 Listing status ok, about to open data connection\r\n")
         data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
         data_client.close
         expect(data).to eql([
-          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file('some_file').created.strftime('%b %d %H:%M')}\tsome_file\n",
-          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file('another_file').created.strftime('%b %d %H:%M')}\tanother_file\n"
+          SpecHelper.statline(server.file('/pub/some_file')),
+          SpecHelper.statline(server.file('/pub/another_file'))
         ].join)
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("226 List information transferred\r\n")
       end
 
       it 'accepts a LIST command with a wildcard argument' do
-        files = ['test.jpg', 'test-2.jpg', 'test.txt']
-        files.each do |file|
-          server.add_file(file, '1234567890')
+        infiles = %w[test.jpg test-2.jpg test.txt].map { |f| "/pub/#{f}" }
+        infiles.each do |f|
+          server.add_file(f, '1234567890')
         end
 
         client.write("LIST *.jpg\r\n")
@@ -320,16 +324,16 @@ describe FakeFtp::Server, 'commands', functional: true do
 
         data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
         data_client.close
-        expect(data).to eql(files[0, 2].map do |file|
-          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file(file).created.strftime('%b %d %H:%M')}\t#{file}\n"
-        end.join)
+        expect(data).to eql(
+          infiles[0, 2].map { |f| SpecHelper.statline(server.file(f)) }.join
+        )
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("226 List information transferred\r\n")
       end
 
       it 'accepts a LIST command with multiple wildcard arguments' do
-        files = ['test.jpg', 'test.gif', 'test.txt']
-        files.each do |file|
+        infiles = %w[test.jpg test.gif test.txt].map { |f| "/pub/#{f}" }
+        infiles.each do |file|
           server.add_file(file, '1234567890')
         end
 
@@ -339,9 +343,9 @@ describe FakeFtp::Server, 'commands', functional: true do
 
         data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
         data_client.close
-        expect(data).to eql(files[0, 2].map do |file|
-          "-rw-r--r--\t1\towner\tgroup\t10\t#{server.file(file).created.strftime('%b %d %H:%M')}\t#{file}\n"
-        end.join)
+        expect(data).to eql(
+          infiles[0, 2].map { |f| SpecHelper.statline(server.file(f)) }.join
+        )
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("226 List information transferred\r\n")
       end
@@ -378,7 +382,7 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       it 'should allow mdtm' do
-        filename = 'file.txt'
+        filename = '/pub/file.txt'
         now = Time.now
         server.add_file(filename, 'some dummy content', now)
         client.write("MDTM #{filename}\r\n")
@@ -451,8 +455,8 @@ describe FakeFtp::Server, 'commands', functional: true do
         data_server.handler_sock
         expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
 
-        server.add_file('some_file', '1234567890')
-        client.write("RETR some_file\r\n")
+        server.add_file('/pub/some_file', '1234567890')
+        client.write("RETR /pub/some_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("150 File status ok, about to open data connection\r\n")
 
@@ -499,7 +503,7 @@ describe FakeFtp::Server, 'commands', functional: true do
       end
 
       it 'accepts RNTO and RNFR' do
-        server.add_file('from_file', '1234567890')
+        server.add_file('/pub/from_file', '1234567890')
 
         client.write("RNFR from_file\r\n")
         expect(SpecHelper.gets_with_timeout(client))
@@ -509,8 +513,8 @@ describe FakeFtp::Server, 'commands', functional: true do
         expect(SpecHelper.gets_with_timeout(client))
           .to eql("250 Path renamed.\r\n")
 
-        expect(server.files).to include('to_file')
-        expect(server.files).to_not include('from_file')
+        expect(server.files).to include('/pub/to_file')
+        expect(server.files).to_not include('/pub/from_file')
       end
 
       it 'accepts an NLST command' do

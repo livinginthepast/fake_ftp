@@ -5,7 +5,7 @@ require 'timeout'
 module FakeFtp
   class Server
     attr_accessor :port, :passive_port
-    attr_reader :mode, :path
+    attr_reader :workdir
 
     CMDS = %w[
       acct
@@ -32,32 +32,58 @@ module FakeFtp
     ].freeze
     LNBK = "\r\n".freeze
 
+    alias path workdir
+
     def initialize(control_port = 21, data_port = nil, options = {})
-      self.port = control_port
-      self.passive_port = data_port
+      @port = control_port
+      @passive_port = data_port
       raise(Errno::EADDRINUSE, port.to_s) if !control_port.zero? && is_running?
       raise(Errno::EADDRINUSE, passive_port.to_s) if passive_port && !passive_port.zero? && is_running?(passive_port)
       @connection = nil
+      @store = {}
+      @workdir = '/pub'
       @options = options
-      @files = []
-      @mode = :active
-      @path = '/pub'
+      @command_state = {}
+
+      options[:mode] = :active unless options.key?(:mode)
+      unless %i[active passive].include?(options[:mode])
+        raise StandardError, "invalid mode #{options[:mode]}"
+      end
+
+      options[:absolute] = false unless options.key?(:absolute)
+      unless [true, false].include?(options[:absolute])
+        raise StandardError, "invalid absolute #{options[:absolute]}"
+      end
     end
 
     def files
-      @files.map(&:name)
+      @store.values.map do |f|
+        if absolute?
+          abspath(f.name)
+        else
+          f.name
+        end
+      end
     end
 
     def file(name)
-      @files.detect { |file| file.name == name || [@path, name].join == name }
+      @store.values.detect do |f|
+        if absolute?
+          abspath(f.name) == name
+        else
+          f.name == name
+        end
+      end
     end
 
     def reset
-      @files.clear
+      @store.clear
     end
 
     def add_file(filename, data, last_modified_time = Time.now)
-      @files << FakeFtp::File.new(filename.to_s, data, @mode, last_modified_time)
+      @store[abspath(filename)] = FakeFtp::File.new(
+        filename.to_s, data, options[:mode], last_modified_time
+      )
     end
 
     def start
@@ -120,9 +146,25 @@ module FakeFtp
       tcp_port.nil? ? port_is_open?(port) : port_is_open?(tcp_port)
     end
 
+    def mode=(value)
+      unless [true, false].include?(value)
+        raise ValueError, "invalid mode #{value}"
+      end
+      options[:mode] = value
+    end
+
+    def mode
+      options[:mode]
+    end
+
     private
 
     attr_reader :options
+
+    def abspath(filename)
+      return filename if filename.start_with?('/')
+      [@workdir.to_s, filename].join('/').gsub('//', '/')
+    end
 
     def respond_with(stuff)
       unless stuff.nil? || @client.nil? || @client.closed?
@@ -156,8 +198,8 @@ module FakeFtp
     end
 
     def _cwd(*args)
-      @path = args[0]
-      @path = "/#{path}" if path[0].chr != '/'
+      @workdir = args[0]
+      @workdir = "/#{@workdir}" unless @workdir.start_with?('/')
       '250 OK!'
     end
 
@@ -172,12 +214,10 @@ module FakeFtp
       data_client = active? ? @active_connection : @data_server.accept
 
       wildcards = build_wildcards(args)
-      files = matching_files(@files, wildcards)
-
-      files = files.map do |f|
+      matching = matching_files(wildcards).map do |f|
         "-rw-r--r--\t1\towner\tgroup\t#{f.bytes}\t#{f.created.strftime('%b %d %H:%M')}\t#{f.name}\n"
       end
-      data_client.write(files.join)
+      data_client.write(matching.join)
       data_client.close
       @active_connection = nil
 
@@ -199,13 +239,11 @@ module FakeFtp
       data_client = active? ? @active_connection : @data_server.accept
 
       wildcards = build_wildcards(args)
-      files = matching_files(@files, wildcards)
-
-      files = files.map do |file|
-        "#{file.name}\n"
+      matching = matching_files(wildcards).map do |f|
+        "#{f.name}\n"
       end
 
-      data_client.write(files.join)
+      data_client.write(matching.join)
       data_client.close
       @active_connection = nil
 
@@ -218,7 +256,7 @@ module FakeFtp
 
     def _pasv(*_args)
       if passive_port
-        @mode = :passive
+        options[:mode] = :passive
         p1 = (passive_port / 256).to_i
         p2 = passive_port % 256
         "227 Entering Passive Mode (127,0,0,1,#{p1},#{p2})"
@@ -234,7 +272,7 @@ module FakeFtp
         @active_connection.close
         @active_connection = nil
       end
-      @mode = :active
+      options[:mode] = :active
       debug('_port active connection ->')
       @active_connection = ::TCPSocket.new('127.0.0.1', remote_port)
       debug('_port active connection <-')
@@ -272,28 +310,31 @@ module FakeFtp
     def _rnfr(rename_from = '')
       return '501 Send path name.' if rename_from.nil? || rename_from.empty?
 
-      @rename_from = rename_from
+      @command_state[:rename_from] = if absolute?
+                                       abspath(rename_from)
+                                     else
+                                       rename_from
+                                     end
       '350 Send RNTO to complete rename.'
     end
 
     def _rnto(rename_to = '')
       return '501 Send path name.' if rename_to.nil? || rename_to.empty?
+      return '503 Send RNFR first.' if @command_state[:rename_from].nil?
 
-      return '503 Send RNFR first.' unless @rename_from
-
-      if file = file(@rename_from)
-        file.name = rename_to
-        @rename_from = nil
-        '250 Path renamed.'
-      else
-        @rename_from = nil
-        '550 File not found.'
+      f = file(@command_state[:rename_from])
+      if f.nil?
+        @command_state[:rename_from] = nil
+        return '550 File not found.'
       end
+
+      f.name = rename_to
+      @command_state[:rename_from] = nil
+      '250 Path renamed.'
     end
 
     def _size(filename)
-      file_size = file(filename).bytes
-      respond_with("213 #{file_size}")
+      respond_with("213 #{file(filename).bytes}")
     end
 
     def _stor(filename = '')
@@ -302,8 +343,10 @@ module FakeFtp
       respond_with('125 Do it!')
       data_client = active? ? @active_connection : @data_server.accept
 
-      file = FakeFtp::File.new([@path, ::File.basename(filename.to_s)].join('/'), data, @mode)
-      @files << file
+      data = data_client.read(nil)
+      @store[abspath(filename)] = FakeFtp::File.new(
+        filename.to_s, data, options[:mode]
+      )
 
       data_client.close
       @active_connection = nil
@@ -311,11 +354,19 @@ module FakeFtp
     end
 
     def _dele(filename = '')
-      filename = ::File.basename(filename)
-      files_to_delete = @files.select { |file| file.name == filename }
+      files_to_delete = @store.values.select do |f|
+        if absolute?
+          abspath(::File.basename(filename)) == abspath(f.name)
+        else
+          ::File.basename(filename) == f.name
+        end
+      end
+
       return '550 Delete operation failed.' if files_to_delete.count == 0
 
-      @files -= files_to_delete
+      @store.reject! do |_, f|
+        files_to_delete.include?(f)
+      end
 
       '250 Delete operation successful.'
     end
@@ -344,17 +395,18 @@ module FakeFtp
     end
 
     def active?
-      @mode == :active
+      options[:mode] == :active
     end
 
-    private
+    def absolute?
+      options[:absolute]
+    end
 
     def port_is_open?(port)
       begin
         Timeout.timeout(1) do
           begin
-            s = TCPSocket.new('127.0.0.1', port)
-            s.close
+            TCPSocket.new('127.0.0.1', port).close
             return true
           rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
             return false
@@ -375,13 +427,13 @@ module FakeFtp
       wildcards
     end
 
-    def matching_files(files, wildcards)
+    def matching_files(wildcards)
       if !wildcards.empty?
-        files.select do |f|
+        @store.values.select do |f|
           wildcards.any? { |wildcard| f.name =~ /#{wildcard}/ }
         end
       else
-        files
+        @store.values
       end
     end
 

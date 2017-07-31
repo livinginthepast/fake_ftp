@@ -56,7 +56,7 @@ describe FakeFtp::Server, 'files' do
   let(:file) { FakeFtp::File.new('filename', 34) }
   let(:server) { FakeFtp::Server.new(21_212) }
 
-  before { server.instance_variable_set(:@files, [file]) }
+  before { server.instance_variable_set(:@store, '/pub/filename' => file) }
 
   it 'returns filenames from :files' do
     expect(server.files).to include('filename')

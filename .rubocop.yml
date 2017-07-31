@@ -6,3 +6,6 @@ Style/Documentation:
 Metrics/BlockLength:
   Exclude:
   - 'spec/**/*'
+
+Metrics/ClassLength:
+  Max: 400
