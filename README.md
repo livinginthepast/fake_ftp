@@ -1,6 +1,8 @@
 # FakeFtp
 
 [![Build status](https://api.travis-ci.org/livinginthepast/fake_ftp.svg?branch=master)](http://travis-ci.org/livinginthepast/fake_ftp)
+[![Code Climate](https://codeclimate.com/github/livinginthepast/fake_ftp/badges/gpa.svg)](https://codeclimate.com/github/livinginthepast/fake_ftp)
+[![Test Coverage](https://codeclimate.com/github/livinginthepast/fake_ftp/badges/coverage.svg)](https://codeclimate.com/github/livinginthepast/fake_ftp/coverage)
 
 This is a gem that allows you to test FTP implementations in ruby. It is a
 minimal single-client FTP server that can be bound to any arbitrary port on
