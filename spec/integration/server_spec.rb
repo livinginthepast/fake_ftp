@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'net/ftp'
 
 describe FakeFtp::Server, 'with ftp client', integration: true do

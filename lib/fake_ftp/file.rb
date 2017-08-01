@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module FakeFtp
   class File
     attr_accessor :bytes, :data, :name, :last_modified_time

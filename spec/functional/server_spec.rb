@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe FakeFtp::Server, 'commands', functional: true do
   let(:absolute?) { true }
   let(:data_port) { rand(16_000..19_000) }
@@ -39,7 +41,7 @@ describe FakeFtp::Server, 'commands', functional: true do
       SpecHelper.gets_with_timeout(client)
       client.write("\r\n")
       expect(SpecHelper.gets_with_timeout(client))
-        .to eql("500 Unknown command\r\n")
+        .to match(/^500 Unknown command "[^"]*"\r\n/)
     end
 
     it 'accepts QUIT' do
@@ -559,6 +561,23 @@ describe FakeFtp::Server, 'commands', functional: true do
           expect(data).to eql("some_file\nanother_file\n")
           expect(SpecHelper.gets_with_timeout(client))
             .to eql("226 List information transferred\r\n")
+        end
+
+        it 'has a flavor' do
+          client.write("PORT #{data_server.addr_bits}\r\n")
+          data_server.handler_sock
+          expect(SpecHelper.gets_with_timeout(client)).to eql("200 Okay\r\n")
+
+          client.write("WAT\r\n")
+          expect(SpecHelper.gets_with_timeout(client))
+            .to eql("418 Pizza Party\r\n")
+
+          data = SpecHelper.gets_with_timeout(
+            data_server.handler_sock, endwith: "\0"
+          )
+          data_server.handler_sock.close
+          expect(data).to_not be_nil
+          expect(data).to_not be_empty
         end
       end
     end
