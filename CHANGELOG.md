@@ -18,7 +18,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Security
 
-## [0.2.0] - 2017-06-26
+## [0.3.0] - 2017-08-01
+### Added
+- integration with Code Climate + simplecov
+- RuboCop with auto-fixes
+- this changelog
+- server: more debugging
+
+### Changed
+- server:
+  - command dispatch via class
+  - store files as a set
+
+### Removed
+- tests: running against ruby 2.2.7
+
+## [0.2.0] - 2017-07-26
 ### Added
 - server: `size` command implementation
 
