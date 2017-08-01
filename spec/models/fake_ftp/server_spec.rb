@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe FakeFtp::Server, 'setup' do
   it 'starts a server on port n' do
     server = FakeFtp::Server.new(21_212)

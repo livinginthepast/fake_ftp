@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe FakeFtp::File do
   context 'attributes' do
     before :each do
