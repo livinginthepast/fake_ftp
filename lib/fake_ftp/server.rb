@@ -214,18 +214,19 @@ module FakeFtp
     end
 
     def build_wildcards(args)
-      wildcards = []
-      args.each do |arg|
-        next unless arg.include? '*'
-        wildcards << arg.gsub('*', '.*')
+      args.map do |arg|
+        if arg.include?('*')
+          arg.gsub('*', '.*')
+        else
+          arg
+        end
       end
-      wildcards
     end
 
-    def matching_files(wildcards)
-      if !wildcards.empty?
+    def matching_files(paths_or_wildcards)
+      if !paths_or_wildcards.empty?
         @store.values.select do |f|
-          wildcards.any? { |wildcard| f.name =~ /#{wildcard}/ }
+          paths_or_wildcards.any? { |item| f.name =~ Regexp.new(item) }
         end
       else
         @store.values
