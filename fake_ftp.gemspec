@@ -8,6 +8,7 @@ Gem::Specification.new do |s|
   s.name = 'fake_ftp'
   s.version = FakeFtp::VERSION
   s.platform = Gem::Platform::RUBY
+  s.required_ruby_version = '>= 2.3.0' # For Safe Navigation Operator
   s.authors = ['Colin Shield', 'Eric Saxby']
   s.email = ['sax+github@livinginthepast.org']
   s.homepage = 'http://rubygems.org/gems/fake_ftp'
