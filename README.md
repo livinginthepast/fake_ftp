@@ -20,6 +20,27 @@ FakeFtp is a simple FTP server that fakes out enough of the protocol to get us
 by, allowing us to test that files get to their intended destination rather than
 testing how our code does so.
 
+## Installation
+
+For Ruby version under 2.3.0
+
+```
+# Gemfile
+gem 'fake_ftp', ~> '0.2.0'
+
+# Gem install
+gem install fake_ftp -v 0.2.0
+```
+
+Ruby version is 2.3.0 or above
+
+```
+gem 'fake_ftp'
+
+# or
+gem install fake_ftp
+```
+
 ## Usage
 
 To test passive upload:
