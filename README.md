@@ -42,7 +42,7 @@ ftp.close
 expect(server.files).to include('some_file.txt')
 expect(server.file('some_file.txt').bytes).to eq 25
 expect(server.file('some_file.txt')).to be_passive
-expect(server.file('some_file.txt')).not_not be_active
+expect(server.file('some_file.txt')).to_not be_active
 
 server.stop
 ```
