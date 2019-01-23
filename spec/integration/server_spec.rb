@@ -62,14 +62,14 @@ describe FakeFtp::Server, 'with ftp client', integration: true do
       expect(server.file('/pub/text_file.txt')).to_not be_active
     end
 
-    it "should put different files in different directories" do
+    it 'should put different files in different directories' do
       expect(File.stat(text_filename).size).to eql(20)
 
       client.passive = true
       client.put(text_filename)
 
-      client.chdir("/tmp")
-      client.put(text_filename, "other_file.txt")
+      client.chdir('/tmp')
+      client.put(text_filename, 'other_file.txt')
 
       expect(server.files).to include('/pub/text_file.txt')
       expect(server.files).to include('/tmp/other_file.txt')
