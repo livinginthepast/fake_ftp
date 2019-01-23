@@ -20,10 +20,6 @@ module FakeFtp
       @last_modified_time = last_modified_time.utc
     end
 
-    def basename
-      ::File.basename(@name)
-    end
-
     def data=(data)
       @data = data
       @bytes = @data.nil? ? nil : data.length
