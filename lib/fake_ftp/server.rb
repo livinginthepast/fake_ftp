@@ -83,6 +83,7 @@ module FakeFtp
             debug('enter request thread')
             while @started && !socket.nil? && !socket.closed?
               input = begin
+                        socket.close and break if socket.eof?
                         socket.gets
                       rescue
                         debug("error on socket.gets: #{e}")
