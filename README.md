@@ -1,5 +1,9 @@
 # FakeFtp
 
+**Archived:** This gem was written for a specific need that I had at the time. I no longer actively
+work in Ruby professionally, and avoid FTP as a protocol when possible. Please consider using
+alternatives to this gem if possible.
+
 [![Build status](https://api.travis-ci.org/livinginthepast/fake_ftp.svg?branch=master)](http://travis-ci.org/livinginthepast/fake_ftp)
 [![Code Climate](https://codeclimate.com/github/livinginthepast/fake_ftp/badges/gpa.svg)](https://codeclimate.com/github/livinginthepast/fake_ftp)
 [![Test Coverage](https://codeclimate.com/github/livinginthepast/fake_ftp/badges/coverage.svg)](https://codeclimate.com/github/livinginthepast/fake_ftp/coverage)
