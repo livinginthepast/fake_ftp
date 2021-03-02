@@ -102,3 +102,7 @@ fast.
 
 * http://rubyforge.org/projects/ftpd/ - a simple ftp daemon written by Chris Wanstrath
 * http://ruby-doc.org/stdlib/libdoc/gserver/rdoc/index.html - a generic server in the Ruby standard library, by John W Small
+
+## Alternatives
+
+* https://github.com/thejamespinto/ftpmock - Test your FTP calls offline.
