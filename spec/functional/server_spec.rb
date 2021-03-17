@@ -329,6 +329,27 @@ describe FakeFtp::Server, 'commands', functional: true do
             .to eql("226 List information transferred\r\n")
         end
 
+        it 'accepts an LIST command with dirname arguments' do
+          some_file = file_prefix + 'some_dir/some_file'
+          another_file = file_prefix + 'some_dir/another_file'
+          server.add_file(some_file, '1234567890')
+          server.add_file(another_file, '1234567890')
+
+          client.write("LIST some_dir\r\n")
+
+          expect(SpecHelper.gets_with_timeout(client))
+            .to eql("150 Listing status ok, about to open data connection\r\n")
+          data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
+          data_client.close
+
+          expect(data).to eql([
+            SpecHelper.statline(server.file(some_file)),
+            SpecHelper.statline(server.file(another_file))
+          ].join("\n"))
+          expect(SpecHelper.gets_with_timeout(client))
+            .to eql("226 List information transferred\r\n")
+        end
+
         it 'accepts a LIST command with a wildcard argument' do
           infiles = %w[test.jpg test-2.jpg test.txt].map do |f|
             "#{file_prefix}#{f}"
@@ -384,6 +405,26 @@ describe FakeFtp::Server, 'commands', functional: true do
           data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
           data_client.close
           expect(data).to eql("some_file\nanother_file\n")
+          expect(SpecHelper.gets_with_timeout(client))
+            .to eql("226 List information transferred\r\n")
+        end
+
+        it 'accepts an NLST command with dirname arguments' do
+          files = ['test.jpg', 'test.txt', 'test2.jpg'].map do |f|
+            "#{file_prefix}some_dir/#{f}"
+          end
+          files.each do |file|
+            server.add_file(file, '1234567890')
+          end
+
+          client.write("NLST #{file_prefix}\r\n")
+
+          expect(SpecHelper.gets_with_timeout(client))
+            .to eql("150 Listing status ok, about to open data connection\r\n")
+          data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
+          data_client.close
+
+          expect(data).to eql(files.join("\n") + "\n")
           expect(SpecHelper.gets_with_timeout(client))
             .to eql("226 List information transferred\r\n")
         end

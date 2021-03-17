@@ -16,8 +16,8 @@ module FakeFtp
                         ctx.data_server.accept
                       end
 
-        wildcards = ctx.build_wildcards(args)
-        statlines = ctx.matching_files(wildcards).map do |f|
+        paths_or_wildcards = ctx.build_wildcards(args)
+        statlines = ctx.matching_files(paths_or_wildcards).map do |f|
           %W[
             -rw-r--r--
             1
