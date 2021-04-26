@@ -3,7 +3,8 @@
 module FakeFtp
   module ServerCommands
     class Retr
-      def run(ctx, filename = '', *)
+      def run(ctx, *filename_parts)
+        filename = filename_parts.join(' ')
         ctx.respond_with('501 No filename given') if filename.empty?
 
         f = ctx.file(filename.to_s)

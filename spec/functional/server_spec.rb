@@ -298,6 +298,18 @@ describe FakeFtp::Server, 'commands', functional: true do
             .to eql("226 File transferred\r\n")
         end
 
+        it 'accepts RETR with a filepath containing spaces' do
+          server.add_file(file_prefix + 'some dir/some file', '1234567890')
+          client.write("RETR #{file_prefix}some dir/some file\r\n")
+          expect(SpecHelper.gets_with_timeout(client))
+            .to eql("150 File status ok, about to open data connection\r\n")
+          data = SpecHelper.gets_with_timeout(data_client, endwith: "\0")
+          data_client.close
+          expect(data).to eql('1234567890')
+          expect(SpecHelper.gets_with_timeout(client))
+            .to eql("226 File transferred\r\n")
+        end
+
         it 'accepts DELE with a filename' do
           server.add_file('some_file', '1234567890')
           client.write("DELE some_file\r\n")
