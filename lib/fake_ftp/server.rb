@@ -35,20 +35,20 @@ module FakeFtp
     end
 
     def files
-      @store.values.map do |f|
+      @store.map do |full_path, file|
         if absolute?
-          abspath(f.name)
+          full_path
         else
-          f.name
+          file.name
         end
       end
     end
 
     def file(name)
-      @store.values.detect do |f|
-        if absolute?
-          abspath(f.name) == name
-        else
+      if absolute?
+        @store[name]
+      else
+        @store.values.detect do |f|
           f.name == name
         end
       end
@@ -62,6 +62,13 @@ module FakeFtp
       @store[abspath(filename)] = FakeFtp::File.new(
         filename.to_s, data, options[:mode], last_modified_time
       )
+    end
+
+    def rename_file(old_name, new_name)
+      file = @store.delete(abspath(old_name))
+      raise ArgumentError, "file not found #{old_name}" if file.nil?
+      file.name = ::File.basename(new_name)
+      @store[abspath(new_name)] = file
     end
 
     def start

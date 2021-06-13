@@ -24,4 +24,4 @@ Metrics/BlockLength:
   Max: 40
 
 Metrics/ClassLength:
-  Max: 200
+  Max: 205

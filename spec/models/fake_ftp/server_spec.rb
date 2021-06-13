@@ -74,4 +74,12 @@ describe FakeFtp::Server, 'files' do
     server.reset
     expect(server.files).to eql([])
   end
+
+  it 'can rename files' do
+    server.rename_file('filename', 'other')
+
+    expect(server.files).to include('other')
+    expect(server.files).to_not include('filename')
+    expect(server.file('other')).to eql(file)
+  end
 end
