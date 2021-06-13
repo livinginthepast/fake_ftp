@@ -154,7 +154,7 @@ module FakeFtp
     private :options
 
     def abspath(filename)
-      return filename if filename.start_with?('/')
+      return filename if filename.to_s.start_with?('/')
       [@workdir.to_s, filename].join('/').gsub('//', '/')
     end
 
