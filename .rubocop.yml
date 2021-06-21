@@ -7,16 +7,16 @@ Style/Documentation:
   Enabled: false
 
 Metrics/AbcSize:
-  Max: 40
+  Max: 45
 
 Metrics/CyclomaticComplexity:
-  Max: 15
+  Max: 16
 
 Metrics/MethodLength:
   Max: 45
 
 Metrics/PerceivedComplexity:
-  Max: 15
+  Max: 16
 
 Metrics/BlockLength:
   Exclude:

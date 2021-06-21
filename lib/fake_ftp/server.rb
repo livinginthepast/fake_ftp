@@ -83,11 +83,13 @@ module FakeFtp
             debug('enter request thread')
             while @started && !socket.nil? && !socket.closed?
               input = begin
-                        socket.gets
-                      rescue
-                        debug("error on socket.gets: #{e}")
-                        nil
-                      end
+                      socket.close && break if socket.eof?
+                      socket.gets
+                    rescue
+                      debug("error on socket.gets: #{e}")
+                      nil
+                    end
+
               if input
                 debug("server client raw: <- #{input.inspect}")
                 respond_with(handle_request(input))
